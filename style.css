@@ -195,7 +195,7 @@ body {
     z-index: 5;
     text-transform: uppercase;
     pointer-events: none;
-    border: 1px solid transparent;
+    border: 2px solid transparent;
 }
 .signal-strength-badge.visible { opacity: 1; }
 .signal-strength-badge.buy { background: rgba(52,211,153,0.15); color: #34d399; border-color: rgba(52,211,153,0.3); }
