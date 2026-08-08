@@ -150,33 +150,33 @@ body {
 }
 
 /* ============================================================
-   МЕРЦАЮЩАЯ ОБВОДКА
+   МЕРЦАЮЩАЯ ОБВОДКА — ТОЛЩЕ И ЯРЧЕ
 ============================================================ */
-@keyframes glow-border-green-60 { 0% { border-color: rgba(52,211,153,0.2); } 50% { border-color: rgba(52,211,153,0.5); } 100% { border-color: rgba(52,211,153,0.2); } }
-@keyframes glow-border-green-65 { 0% { border-color: rgba(52,211,153,0.3); } 50% { border-color: rgba(52,211,153,0.6); } 100% { border-color: rgba(52,211,153,0.3); } }
-@keyframes glow-border-green-70 { 0% { border-color: rgba(52,211,153,0.4); } 50% { border-color: rgba(52,211,153,0.7); } 100% { border-color: rgba(52,211,153,0.4); } }
-@keyframes glow-border-green-75 { 0% { border-color: rgba(52,211,153,0.5); } 50% { border-color: #34d399; } 100% { border-color: rgba(52,211,153,0.5); } }
-@keyframes glow-border-green-80 { 0% { border-color: rgba(52,211,153,0.6); } 50% { border-color: #10b981; box-shadow:0 0 20px rgba(52,211,153,0.2); } 100% { border-color: rgba(52,211,153,0.6); } }
+@keyframes glow-border-green-60 { 0% { border-color: rgba(52,211,153,0.2); border-width: 4px; } 50% { border-color: rgba(52,211,153,0.6); border-width: 4px; box-shadow: 0 0 18px rgba(52,211,153,0.2); } 100% { border-color: rgba(52,211,153,0.2); border-width: 4px; } }
+@keyframes glow-border-green-65 { 0% { border-color: rgba(52,211,153,0.3); border-width: 4px; } 50% { border-color: rgba(52,211,153,0.7); border-width: 4px; box-shadow: 0 0 22px rgba(52,211,153,0.25); } 100% { border-color: rgba(52,211,153,0.3); border-width: 4px; } }
+@keyframes glow-border-green-70 { 0% { border-color: rgba(52,211,153,0.4); border-width: 4px; } 50% { border-color: rgba(52,211,153,0.8); border-width: 4px; box-shadow: 0 0 26px rgba(52,211,153,0.3); } 100% { border-color: rgba(52,211,153,0.4); border-width: 4px; } }
+@keyframes glow-border-green-75 { 0% { border-color: rgba(52,211,153,0.5); border-width: 5px; } 50% { border-color: #34d399; border-width: 5px; box-shadow: 0 0 30px rgba(52,211,153,0.35); } 100% { border-color: rgba(52,211,153,0.5); border-width: 5px; } }
+@keyframes glow-border-green-80 { 0% { border-color: rgba(52,211,153,0.6); border-width: 5px; } 50% { border-color: #10b981; border-width: 5px; box-shadow: 0 0 40px rgba(52,211,153,0.5); } 100% { border-color: rgba(52,211,153,0.6); border-width: 5px; } }
 
-@keyframes glow-border-red-60 { 0% { border-color: rgba(248,113,113,0.2); } 50% { border-color: rgba(248,113,113,0.5); } 100% { border-color: rgba(248,113,113,0.2); } }
-@keyframes glow-border-red-65 { 0% { border-color: rgba(248,113,113,0.3); } 50% { border-color: rgba(248,113,113,0.6); } 100% { border-color: rgba(248,113,113,0.3); } }
-@keyframes glow-border-red-70 { 0% { border-color: rgba(248,113,113,0.4); } 50% { border-color: rgba(248,113,113,0.7); } 100% { border-color: rgba(248,113,113,0.4); } }
-@keyframes glow-border-red-75 { 0% { border-color: rgba(248,113,113,0.5); } 50% { border-color: #f87171; } 100% { border-color: rgba(248,113,113,0.5); } }
-@keyframes glow-border-red-80 { 0% { border-color: rgba(248,113,113,0.6); } 50% { border-color: #ef4444; box-shadow:0 0 20px rgba(248,113,113,0.2); } 100% { border-color: rgba(248,113,113,0.6); } }
+@keyframes glow-border-red-60 { 0% { border-color: rgba(248,113,113,0.2); border-width: 4px; } 50% { border-color: rgba(248,113,113,0.6); border-width: 4px; box-shadow: 0 0 18px rgba(248,113,113,0.2); } 100% { border-color: rgba(248,113,113,0.2); border-width: 4px; } }
+@keyframes glow-border-red-65 { 0% { border-color: rgba(248,113,113,0.3); border-width: 4px; } 50% { border-color: rgba(248,113,113,0.7); border-width: 4px; box-shadow: 0 0 22px rgba(248,113,113,0.25); } 100% { border-color: rgba(248,113,113,0.3); border-width: 4px; } }
+@keyframes glow-border-red-70 { 0% { border-color: rgba(248,113,113,0.4); border-width: 4px; } 50% { border-color: rgba(248,113,113,0.8); border-width: 4px; box-shadow: 0 0 26px rgba(248,113,113,0.3); } 100% { border-color: rgba(248,113,113,0.4); border-width: 4px; } }
+@keyframes glow-border-red-75 { 0% { border-color: rgba(248,113,113,0.5); border-width: 5px; } 50% { border-color: #f87171; border-width: 5px; box-shadow: 0 0 30px rgba(248,113,113,0.35); } 100% { border-color: rgba(248,113,113,0.5); border-width: 5px; } }
+@keyframes glow-border-red-80 { 0% { border-color: rgba(248,113,113,0.6); border-width: 5px; } 50% { border-color: #ef4444; border-width: 5px; box-shadow: 0 0 40px rgba(248,113,113,0.5); } 100% { border-color: rgba(248,113,113,0.6); border-width: 5px; } }
 
-.signal-card.buy-60 { animation: glow-border-green-60 2s ease-in-out infinite; }
-.signal-card.buy-65 { animation: glow-border-green-65 1.5s ease-in-out infinite; }
-.signal-card.buy-70 { animation: glow-border-green-70 1.2s ease-in-out infinite; }
-.signal-card.buy-75 { animation: glow-border-green-75 0.9s ease-in-out infinite; }
-.signal-card.buy-80 { animation: glow-border-green-80 0.6s ease-in-out infinite; }
+.signal-card.buy-60 { animation: glow-border-green-60 2s ease-in-out infinite; border-style: solid; }
+.signal-card.buy-65 { animation: glow-border-green-65 1.5s ease-in-out infinite; border-style: solid; }
+.signal-card.buy-70 { animation: glow-border-green-70 1.2s ease-in-out infinite; border-style: solid; }
+.signal-card.buy-75 { animation: glow-border-green-75 0.9s ease-in-out infinite; border-style: solid; }
+.signal-card.buy-80 { animation: glow-border-green-80 0.6s ease-in-out infinite; border-style: solid; }
 
-.signal-card.sell-60 { animation: glow-border-red-60 2s ease-in-out infinite; }
-.signal-card.sell-65 { animation: glow-border-red-65 1.5s ease-in-out infinite; }
-.signal-card.sell-70 { animation: glow-border-red-70 1.2s ease-in-out infinite; }
-.signal-card.sell-75 { animation: glow-border-red-75 0.9s ease-in-out infinite; }
-.signal-card.sell-80 { animation: glow-border-red-80 0.6s ease-in-out infinite; }
+.signal-card.sell-60 { animation: glow-border-red-60 2s ease-in-out infinite; border-style: solid; }
+.signal-card.sell-65 { animation: glow-border-red-65 1.5s ease-in-out infinite; border-style: solid; }
+.signal-card.sell-70 { animation: glow-border-red-70 1.2s ease-in-out infinite; border-style: solid; }
+.signal-card.sell-75 { animation: glow-border-red-75 0.9s ease-in-out infinite; border-style: solid; }
+.signal-card.sell-80 { animation: glow-border-red-80 0.6s ease-in-out infinite; border-style: solid; }
 
-.signal-card.neutral { animation: none !important; border-color: rgba(255,255,255,0.06) !important; box-shadow: none !important; }
+.signal-card.neutral { animation: none !important; border-color: rgba(255,255,255,0.06) !important; border-width: 1px !important; box-shadow: none !important; }
 
 /* ============================================================
    БЭЙДЖ УРОВНЯ СИГНАЛА
@@ -195,7 +195,7 @@ body {
     z-index: 5;
     text-transform: uppercase;
     pointer-events: none;
-    border: 2px solid transparent;
+    border: 1px solid transparent;
 }
 .signal-strength-badge.visible { opacity: 1; }
 .signal-strength-badge.buy { background: rgba(52,211,153,0.15); color: #34d399; border-color: rgba(52,211,153,0.3); }
