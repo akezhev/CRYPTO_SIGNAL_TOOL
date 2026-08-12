@@ -1,17 +1,11 @@
 /**
  * ================================================================
- *  CRYPTO SIGNAL WIDGET — ПОЛНАЯ ВЕРСИЯ
- *  Version: 8.1.0 (Разделение на файлы)
+ *  CRYPTO SIGNAL WIDGET — СО ЗВУКОВЫМИ ОПОВЕЩЕНИЯМИ
  *  
- *  ОСОБЕННОСТИ:
- *  - 7 индикаторов: RSI, MACD, EMA, CVD, BB, Volume, POC
- *  - Мульти-биржевая загрузка (7 бирж)
- *  - WebSocket реального времени
- *  - 5 таймфреймов
- *  - 9 активов
- *  - Мерцающая обводка при сигналах
- *  - История торговли с backtesting
- *  - Встроенная документация
+ *  ЗВУКОВЫЕ ФУНКЦИИ:
+ *  - Звуковой сигнал Ding-ding.mp3 при BUY/SELL >= 75%
+ *  - Кнопка включения/выключения звука
+ *  - Звук сохраняется в папке audio/
  * ================================================================
  */
 
@@ -42,10 +36,119 @@
         historyCandles: 1500,
         minCandlesRequired: 50,
         trading: {
-            minConfidence: 55,
-            minProfitPercent: 0.5,
+            minConfidence: 65,
+            minProfitPercent: 1.0,
             maxLossPercent: 2.0,
             positionSize: 1000
+        },
+        sound: {
+            threshold: 75, // Процент уверенности для звукового сигнала
+            filePath: 'audio/Ding-ding.mp3' // Путь к звуковому файлу
+        }
+    };
+
+    // ============================================================
+    //  ЗВУКОВАЯ СИСТЕМА
+    // ============================================================
+
+    const SoundSystem = {
+        _audio: null,
+        _isEnabled: true,
+        _isLoaded: false,
+        _lastPlayedSignals: new Map(),
+
+        init: function() {
+            this._audio = new Audio();
+            this._audio.preload = 'auto';
+            
+            // Загружаем звуковой файл
+            this._audio.src = CONFIG.sound.filePath;
+            
+            // Обработчики загрузки
+            this._audio.addEventListener('canplaythrough', () => {
+                this._isLoaded = true;
+                console.log('🔊 Звук загружен:', CONFIG.sound.filePath);
+            });
+            
+            this._audio.addEventListener('error', (e) => {
+                console.warn('⚠️ Не удалось загрузить звук:', CONFIG.sound.filePath);
+                console.warn('⚠️ Убедитесь, что файл существует по пути:', CONFIG.sound.filePath);
+                // Пробуем загрузить с относительным путем
+                this._audio.src = './' + CONFIG.sound.filePath;
+            });
+
+            // Загружаем состояние из localStorage
+            this.loadState();
+            
+            return this;
+        },
+
+        playSound: function(signalType, asset, confidence) {
+            if (!this._isEnabled) return;
+            if (!this._isLoaded) {
+                console.warn('⚠️ Звук ещё не загружен');
+                return;
+            }
+            if (confidence < CONFIG.sound.threshold) return;
+
+            // Проверяем, не играли ли уже этот сигнал для данного актива
+            const signalKey = `${asset}-${signalType}`;
+            const now = Date.now();
+            const lastPlayed = this._lastPlayedSignals.get(signalKey) || 0;
+            
+            // Не играем чаще чем раз в 30 секунд для одного актива
+            if (now - lastPlayed < 30000) return;
+            
+            this._lastPlayedSignals.set(signalKey, now);
+
+            try {
+                // Сброс и воспроизведение
+                this._audio.currentTime = 0;
+                this._audio.play().catch(e => {
+                    console.warn('⚠️ Не удалось воспроизвести звук:', e);
+                });
+                
+                console.log(`🔊 Звуковой сигнал: ${signalType} ${asset} (${confidence}%)`);
+                
+                // Очищаем старые записи (старше 5 минут)
+                for (const [key, time] of this._lastPlayedSignals) {
+                    if (now - time > 300000) {
+                        this._lastPlayedSignals.delete(key);
+                    }
+                }
+
+            } catch (e) {
+                console.warn('⚠️ Ошибка воспроизведения звука:', e);
+            }
+        },
+
+        toggle: function() {
+            this._isEnabled = !this._isEnabled;
+            this.saveState();
+            return this._isEnabled;
+        },
+
+        isEnabled: function() {
+            return this._isEnabled;
+        },
+
+        isLoaded: function() {
+            return this._isLoaded;
+        },
+
+        saveState: function() {
+            try {
+                localStorage.setItem('signalSoundEnabled', JSON.stringify(this._isEnabled));
+            } catch (e) {}
+        },
+
+        loadState: function() {
+            try {
+                const enabled = localStorage.getItem('signalSoundEnabled');
+                if (enabled !== null) {
+                    this._isEnabled = JSON.parse(enabled);
+                }
+            } catch (e) {}
         }
     };
 
@@ -103,7 +206,7 @@
             positionSize: '1-2%',
             stopLoss: '0.5-1%',
             takeProfit: '0.5-1.5%',
-            confidence: 'Требуется > 65%'
+            confidence: 'Требуется > 75%'
         },
         '1h': {
             name: '1 Час',
@@ -115,7 +218,7 @@
             positionSize: '3-5%',
             stopLoss: '1-1.5%',
             takeProfit: '1-3%',
-            confidence: 'Требуется > 60%'
+            confidence: 'Требуется > 70%'
         },
         '2h': {
             name: '2 Часа',
@@ -127,7 +230,7 @@
             positionSize: '3-5%',
             stopLoss: '1.5-2%',
             takeProfit: '2-4%',
-            confidence: 'Требуется > 60%'
+            confidence: 'Требуется > 65%'
         },
         '4h': {
             name: '4 Часа',
@@ -139,7 +242,7 @@
             positionSize: '5-10%',
             stopLoss: '2-3%',
             takeProfit: '3-6%',
-            confidence: 'Требуется > 55%'
+            confidence: 'Требуется > 65%'
         },
         '1d': {
             name: '1 День',
@@ -151,7 +254,7 @@
             positionSize: '10-20%',
             stopLoss: '3-5%',
             takeProfit: '5-15%',
-            confidence: 'Требуется > 50%'
+            confidence: 'Требуется > 55%'
         }
     };
 
@@ -176,7 +279,8 @@
         historyLoaded: false,
         assetAvailability: {},
         loadingStatus: {},
-        dataLoadAttempts: {}
+        dataLoadAttempts: {},
+        previousSignals: new Map()
     };
 
     const cache = new Map();
@@ -200,7 +304,6 @@
 
         for (const exchange of EXCHANGE_CONFIG.restEndpoints) {
             try {
-                const startTime = performance.now();
                 let url = '';
                 const intervalStr = intervalMap[interval]?.[exchange.id] || '1h';
 
@@ -245,7 +348,6 @@
                 if (!response.ok) continue;
 
                 const data = await response.json();
-                const endTime = performance.now();
 
                 let candles = parseExchangeData(data, exchange.id);
 
@@ -350,15 +452,28 @@
             return;
         }
 
+        const isSoundEnabled = SoundSystem.isEnabled();
+        const isSoundLoaded = SoundSystem.isLoaded();
+
         container.innerHTML = `
             <div class="crypto-signal-widget">
                 <div class="widget-header">
                     <div>
-                        <span class="widget-title">🧠Crypto Signal Engine</span>
-                        <span class="widget-version">v8.1 • Это профессиональный торговый терминал для криптовалют, который объединяет 7 лучших технических индикаторов в единую систему генерации сигналов. Приложение работает в реальном времени, анализируя данные с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin).</span>
-                        <span class="widget-version">Если данных достаточно (>50 свечей) → отображаются все 7 индикаторов /// Для полной загрузки всех индикаторов необходимо время (> 1часа)</span> 
+                        <span class="widget-title">🧠 Crypto Signal Engine</span>
+                        <span class="widget-version">v8.1 • Со звуковыми оповещениями</span>
+                        <span class="widget-version">🔊 Звуковой сигнал при BUY/SELL ≥ 75%</span>
                     </div>
                     <div class="widget-status-group">
+                        <div class="sound-controls">
+                            <button class="sound-toggle ${isSoundEnabled ? 'active' : 'muted'}" id="sound-toggle">
+                                ${isSoundEnabled ? '🔊' : '🔇'}
+                                <span class="sound-label">${isSoundEnabled ? 'Звук Вкл' : 'Звук Выкл'}</span>
+                            </button>
+                            <span class="sound-status" id="sound-status">
+                                <span class="sound-indicator ${isSoundLoaded ? 'on' : 'off'}"></span>
+                                ${isSoundLoaded ? 'Ding-ding.mp3' : 'Загрузка...'}
+                            </span>
+                        </div>
                         <span class="ws-status" id="ws-status">⚡ Подключение...</span>
                         <span class="last-update" id="last-update">--:--:--</span>
                     </div>
@@ -419,7 +534,7 @@
 
                 <div class="trade-history-section">
                     <div class="trade-history-header">
-                        <div class="trade-history-title">📊 История торговли — это бэктест (backtesting) вашей стратегии на исторических данных. Виджет симулирует торговлю, используя те же самые 7 индикаторов, и показывает, как бы вы заработали или потеряли деньги, если бы следовали сигналам в прошлом. <span id="history-asset-count">(загружается...)</span></div>
+                        <div class="trade-history-title">📊 История торговли — это бэктест (backtesting) вашей стратегии на исторических данных. <span id="history-asset-count">(загружается...)</span></div>
                         <div class="trade-history-stats" id="trade-stats">
                             <div class="stat-item">Всего: <span class="stat-value total" id="stat-total">0</span></div>
                             <div class="stat-item">✅ Win: <span class="stat-value win" id="stat-wins">0</span></div>
@@ -443,6 +558,7 @@
                     <div class="footer-stat">🌐 <span id="exchange-info">Биржи: мульти</span></div>
                     <div class="footer-stat">⏱️ <span id="tf-info">5 таймфреймов</span></div>
                     <div class="footer-stat">🔔 <span id="visual-status">Мерцание: активно</span></div>
+                    <div class="footer-stat">🔊 <span id="sound-status-footer">Звук: ${isSoundEnabled ? 'Вкл' : 'Выкл'}</span></div>
                 </div>
 
                 <div class="documentation-section" id="doc-section">
@@ -483,6 +599,7 @@
                         <span class="legend-item" style="color:#fbbf24;">🟢 Мерцание BUY</span>
                         <span class="legend-item" style="color:#fbbf24;">🔴 Мерцание SELL</span>
                         <span class="legend-item" style="color:#64748b;">⚠️ Риск-менеджмент обязателен!</span>
+                        <span class="legend-item" style="color:#fbbf24;">🔊 Звук при ≥75%</span>
                     </div>
                     <div style="margin-top:8px; padding:8px 12px; background:rgba(255,255,255,0.03); border-radius:8px; font-size:11px; color:#94a3b8;">
                         <strong style="color:#e2e8f0;">📌 Общие правила:</strong><br>
@@ -492,73 +609,9 @@
                         • 1D — для долгосрочных инвестиций<br>
                         • Всегда используйте стоп-лосс!<br>
                         • Не рискуйте более 2-3% депозита на одну сделку<br>
-                        • Диверсифицируйте активы (не более 30% в один актив)
+                        • Диверсифицируйте активы (не более 30% в один актив)<br>
+                        🔊 <strong style="color:#fbbf24;">Звук:</strong> Активируется при сигнале BUY или SELL с уверенностью ≥ 75%
                     </div>
-                    <br>
-                    <span>Данное приложение — это мощный инструмент для принятия торговых решений, но не гарантия прибыли.</span>
-                    <br>
-                    <span>🧠 РАСШИФРОВКА 7 ИНДИКАТОРОВ
-                        <br>
-                        1. RSI (Индекс относительной силы) — Вес 15%
-                        Значение	Сигнал	Баллы
-                        RSI < 30	Перепроданность → BUY	+15
-                        RSI < 40	Легкая перепроданность → BUY	+5
-                        RSI > 70	Перекупленность → SELL	-15
-                        RSI > 60	Легкая перекупленность → SELL	-5
-                        40-60	Нейтрально	0
-                        <br>
-                        2. MACD (12, 26, 9) — Вес 20%
-                        Ситуация	Сигнал	Баллы
-                        Hist > 0 И MACD > Signal	Бычий момент → BUY	+20
-                        Hist < 0 И MACD < Signal	Медвежий момент → SELL	-20
-                        Hist растет	Усиление бычьего момента → BUY	+10
-                        Hist падает	Усиление медвежьего момента → SELL	-10
-                        <br>
-                        3. EMA Ribbon (8, 13, 21, 50) — Вес 20%
-                        Ситуация	Сигнал	Баллы
-                        Цена > EMA8 > EMA13 > EMA21 > EMA50	Сильный бычий тренд → BUY	+20
-                        Цена < EMA8 < EMA13 < EMA21 < EMA50	Сильный медвежий тренд → SELL	-20
-                        <br>
-                        4. CVD (Кумулятивный объемный дельта) — Вес 15%
-                        Ситуация	Сигнал	Баллы
-                        CVD растет и > 0	Покупатели доминируют → BUY	+15
-                        CVD падает и < 0	Продавцы доминируют → SELL	-15
-                        <br>
-                        5. Bollinger Bands (20, 2) — Вес 15%
-                        Ситуация	Сигнал	Баллы
-                        Цена < Нижняя полоса	Экстремальная перепроданность → BUY	+15
-                        Цена > Верхняя полоса	Экстремальная перекупленность → SELL	-15
-                        Сужение полос + цена выше среднего	Ожидание пробоя вверх → BUY	+10
-                        Сужение полос + цена ниже среднего	Ожидание пробоя вниз → SELL	-10
-                        <br>
-                        6. Volume Spike (Аномальный объем) — Вес 10%
-                        Ситуация	Сигнал	Баллы
-                        Объем > 1.5x среднего И цена > EMA8	Подтверждение бычьего движения → BUY	+10
-                        Объем > 1.5x среднего И цена < EMA8	Подтверждение медвежьего движения → SELL	-10
-                        <br>
-                        7. POC (Point of Control) — Вес 5%
-                        Ситуация	Сигнал	Баллы
-                        Цена у POC И цена > EMA8	Уровень поддержки → BUY	+5
-                        Цена у POC И цена < EMA8	Уровень сопротивления → SELL	-5
-                    </span>
-                    <br>
-                    <span>
-                        <strong>МЕРЦАНИЕ</strong>
-                        <br>
-                        Мерцающая обводка (визуализация):
-                        <br>
-                        Уровень	Цвет	Скорость мерцания	Действие
-                        <br>
-                        60-64%	🟢/🔴 Слабая	2 секунды	Обратить внимание
-                        <br>
-                        65-69%	🟢/🔴 Средняя	1.5 секунды	Рассмотреть вход
-                        <br>
-                        70-74%	🟢/🔴 Сильная	1.2 секунды	Хороший сигнал
-                        <br>
-                        75-79%	🟢/🔴 Очень сильная	0.9 секунды	Отличный сигнал
-                        <br>
-                        80%+	🟢/🔴 Экстремальная	0.6 секунды	🔥 СРОЧНЫЙ ВХОД!
-                    </span>
                 </div>
             </div>
         `;
@@ -579,6 +632,9 @@
         els.visualStatus = document.getElementById('visual-status');
         els.docGrid = document.getElementById('doc-grid');
         els.tfButtons = document.querySelectorAll('.tf-btn');
+        els.soundToggle = document.getElementById('sound-toggle');
+        els.soundStatus = document.getElementById('sound-status');
+        els.soundStatusFooter = document.getElementById('sound-status-footer');
 
         els.statTotal = document.getElementById('stat-total');
         els.statWins = document.getElementById('stat-wins');
@@ -589,6 +645,23 @@
         if (els.tfInfo) els.tfInfo.textContent = `${CONFIG.timeframes.length} таймфреймов`;
         if (els.visualStatus) els.visualStatus.textContent = '🔔 Мерцание: активно';
 
+        // --- Обработчик кнопки звука ---
+        if (els.soundToggle) {
+            els.soundToggle.addEventListener('click', function() {
+                const enabled = SoundSystem.toggle();
+                this.className = `sound-toggle ${enabled ? 'active' : 'muted'}`;
+                this.innerHTML = `
+                    ${enabled ? '🔊' : '🔇'}
+                    <span class="sound-label">${enabled ? 'Звук Вкл' : 'Звук Выкл'}</span>
+                `;
+                if (els.soundStatusFooter) {
+                    els.soundStatusFooter.textContent = `Звук: ${enabled ? 'Вкл' : 'Выкл'}`;
+                }
+                console.log(`🔊 Звук ${enabled ? 'включен' : 'выключен'}`);
+            });
+        }
+
+        // --- Обработчики таймфреймов ---
         els.tfButtons.forEach(btn => {
             btn.addEventListener('click', function(e) {
                 els.tfButtons.forEach(b => b.classList.remove('active'));
@@ -1213,7 +1286,7 @@
     }
 
     // ============================================================
-    //  ВИЗУАЛИЗАЦИЯ СИГНАЛОВ
+    //  ВИЗУАЛИЗАЦИЯ СИГНАЛОВ (С ЗВУКОВЫМ ОПОВЕЩЕНИЕМ)
     // ============================================================
 
     function updateSignalVisualization(asset, direction, confidence) {
@@ -1222,7 +1295,6 @@
 
         const badge = card.querySelector('.signal-strength-badge');
 
-        const baseClasses = ['signal-card'];
         const currentClasses = card.className.split(' ');
         const keepClasses = currentClasses.filter(cls =>
             !cls.startsWith('buy-') &&
@@ -1244,8 +1316,10 @@
         let signalClass = '';
         let badgeText = '';
         let badgeClass = '';
+        let signalType = '';
 
         if (direction === 'BUY') {
+            signalType = 'BUY';
             if (confidence >= 80) {
                 signalClass = 'buy-80';
                 badgeText = '🔥 СИЛЬНЫЙ BUY';
@@ -1268,6 +1342,7 @@
                 badgeClass = 'buy';
             }
         } else if (direction === 'SELL') {
+            signalType = 'SELL';
             if (confidence >= 80) {
                 signalClass = 'sell-80';
                 badgeText = '🔥 СИЛЬНЫЙ SELL';
@@ -1298,6 +1373,20 @@
         if (badge && badgeText) {
             badge.textContent = badgeText;
             badge.className = `signal-strength-badge visible ${badgeClass}`;
+        }
+
+        // --- ЗВУКОВОЕ ОПОВЕЩЕНИЕ ---
+        // Проверяем, достиг ли сигнал порога 75%
+        if (confidence >= CONFIG.sound.threshold && signalType) {
+            // Проверяем, изменился ли сигнал
+            const prevSignal = state.previousSignals.get(asset);
+            const currentSignal = `${direction}-${confidence}`;
+            
+            // Воспроизводим звук, если сигнал новый или изменился
+            if (prevSignal !== currentSignal) {
+                SoundSystem.playSound(signalType, asset, confidence);
+                state.previousSignals.set(asset, currentSignal);
+            }
         }
     }
 
@@ -1371,8 +1460,8 @@
             const barPercent = Math.min(Math.abs(score) / maxScore * 100, 100);
             barFill.style.width = `${barPercent}%`;
             barFill.className = `indicator-bar-fill ${direction === 'strong-bullish' || direction === 'bullish' ? 'bullish' : 
-                                                         direction === 'strong-bearish' || direction === 'bearish' ? 'bearish' : 
-                                                         'neutral'}`;
+                                                 direction === 'strong-bearish' || direction === 'bearish' ? 'bearish' : 
+                                                 'neutral'}`;
         });
     }
 
@@ -1818,27 +1907,27 @@
             const displayName = ASSET_DISPLAY_NAMES[trade.asset] || trade.asset;
 
             return `
-                <div class="trade-card">
-                    <div class="trade-info">
-                        <div class="trade-asset">${displayName}</div>
-                        <div class="trade-detail">
-                            <span class="trade-direction-badge ${badgeClass}">${directionLabel}</span>
-                            <span style="color:#475569; margin-left:6px;">conf: ${trade.confidence}%</span>
+                        <div class="trade-card">
+                            <div class="trade-info">
+                                <div class="trade-asset">${displayName}</div>
+                                <div class="trade-detail">
+                                    <span class="trade-direction-badge ${badgeClass}">${directionLabel}</span>
+                                    <span style="color:#475569; margin-left:6px;">conf: ${trade.confidence}%</span>
+                                </div>
+                                <div class="trade-detail">Entry: $${trade.entryPrice.toFixed(2)} → Exit: $${trade.exitPrice.toFixed(2)}</div>
+                                <div class="trade-time">${date}</div>
+                            </div>
+                            <div class="trade-result">
+                                <div class="trade-profit ${isWin ? 'positive' : isNeutral ? 'neutral' : 'negative'}">${profitStr}</div>
+                                <div style="font-size:10px; color:#64748b;">${profitPercentStr}</div>
+                                <div style="font-size:8px; color:#475569; margin-top:2px;">
+                                    ${trade.exitReason === 'take_profit' ? '✅ TP' :
+                                      trade.exitReason === 'stop_loss' ? '🛑 SL' :
+                                      trade.exitReason === 'reverse_signal' ? '🔄 REV' : '⏱️ TO'}
+                                </div>
+                            </div>
                         </div>
-                        <div class="trade-detail">Entry: $${trade.entryPrice.toFixed(2)} → Exit: $${trade.exitPrice.toFixed(2)}</div>
-                        <div class="trade-time">${date}</div>
-                    </div>
-                    <div class="trade-result">
-                        <div class="trade-profit ${isWin ? 'positive' : isNeutral ? 'neutral' : 'negative'}">${profitStr}</div>
-                        <div style="font-size:10px; color:#64748b;">${profitPercentStr}</div>
-                        <div style="font-size:8px; color:#475569; margin-top:2px;">
-                            ${trade.exitReason === 'take_profit' ? '✅ TP' :
-                              trade.exitReason === 'stop_loss' ? '🛑 SL' :
-                              trade.exitReason === 'reverse_signal' ? '🔄 REV' : '⏱️ TO'}
-                        </div>
-                    </div>
-                </div>
-            `;
+                    `;
         }).join('');
 
         if (trades.length > 20) {
@@ -1891,7 +1980,10 @@
     // ============================================================
 
     async function init() {
-        console.log('🚀 Инициализация Crypto Signal Widget v8.1...');
+        console.log('🚀 Инициализация Crypto Signal Widget со звуком...');
+
+        // Инициализация звуковой системы
+        SoundSystem.init();
 
         renderWidget();
         setupWebSocket();
@@ -1917,6 +2009,8 @@
                     historyTrades: state.tradeHistory.length,
                     tradeStats: state.tradeStats,
                     marketDataSize: state.marketData.size,
+                    soundEnabled: SoundSystem.isEnabled(),
+                    soundLoaded: SoundSystem.isLoaded(),
                     signals: Array.from(state.signals.entries()).map(([k, v]) => ({
                         asset: k,
                         direction: v.direction,
@@ -1934,16 +2028,20 @@
             loadAsset: loadAssetData,
             destroy: destroy,
             config: CONFIG,
-            guide: TRADING_GUIDE
+            guide: TRADING_GUIDE,
+            sound: {
+                toggle: SoundSystem.toggle.bind(SoundSystem),
+                isEnabled: SoundSystem.isEnabled.bind(SoundSystem),
+                isLoaded: SoundSystem.isLoaded.bind(SoundSystem)
+            }
         };
 
-        console.log('%c✅ Виджет успешно инициализирован!', 'font-size:16px; font-weight:bold; color:#34d399;');
-        console.log(`📊 Активов: ${CONFIG.assets.length}`);
-        console.log(`⏱️ Таймфреймы: ${CONFIG.timeframes.join(', ')}`);
-        console.log(`📈 История: ${state.tradeHistory.length} сделок`);
-        console.log(`📊 Данные загружены для ${state.marketData.size} активов`);
-        console.log(`🔔 Все 7 индикаторов отображаются на каждой карточке!`);
-        console.log('%c📊 Введите window.__signalWidget.getState() для просмотра состояния', 'font-size:12px; color:#94a3b8;');
+        console.log('%c✅ Виджет успешно инициализирован со звуком!', 'font-size:16px; font-weight:bold; color:#34d399;');
+        console.log(`🔊 Звук: ${SoundSystem.isEnabled() ? 'Включен' : 'Выключен'}`);
+        console.log(`🔊 Звуковой файл: ${CONFIG.sound.filePath}`);
+        console.log(`🔊 Статус загрузки: ${SoundSystem.isLoaded() ? 'Загружен ✅' : 'Не загружен ❌'}`);
+        console.log(`🔊 Порог срабатывания: ${CONFIG.sound.threshold}%`);
+        console.log('📊 Введите window.__signalWidget для управления');
     }
 
     // ============================================================

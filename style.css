@@ -89,6 +89,87 @@ body {
     font-weight: 400;
 }
 
+/* ============================================================
+   ЗВУКОВЫЕ ЭЛЕМЕНТЫ УПРАВЛЕНИЯ
+============================================================ */
+.sound-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sound-toggle {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sound-toggle:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: scale(1.05);
+}
+
+.sound-toggle.active {
+    color: #34d399;
+}
+
+.sound-toggle.muted {
+    color: #f87171;
+}
+
+.sound-toggle .sound-label {
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.sound-status {
+    font-size: 10px;
+    color: #64748b;
+    max-width: 120px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sound-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 4px;
+}
+
+.sound-indicator.on {
+    background: #34d399;
+    box-shadow: 0 0 10px rgba(52, 211, 153, 0.5);
+    animation: pulse-sound 2s ease-in-out infinite;
+}
+
+.sound-indicator.off {
+    background: #f87171;
+}
+
+@keyframes pulse-sound {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+/* ============================================================
+   ТАЙМФРЕЙМЫ
+============================================================ */
 .tf-group {
     display: flex;
     gap: 8px;
@@ -615,6 +696,7 @@ body {
     .widget-version { display: none; }
     .widget-header { flex-direction: column; align-items: flex-start; }
     .widget-status-group { width: 100%; justify-content: space-between; }
+    .sound-controls { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
     .action-indicators { flex-direction: row; gap: 4px; padding: 6px; }
     .action-indicator .value { font-size: 12px; }
     .action-indicator .label { font-size: 7px; }
@@ -624,6 +706,7 @@ body {
     .trade-history-grid { grid-template-columns: 1fr; max-height: 200px; }
     .trade-history-stats { font-size: 10px; gap: 8px; }
     .signal-strength-badge { font-size: 7px; padding: 1px 6px; top: 4px; right: 4px; }
+    .sound-status { max-width: 80px; font-size: 9px; }
 }
 
 @media (max-width: 400px) {
