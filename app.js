@@ -1239,7 +1239,7 @@
                         <span class="widget-title">🧠 Crypto Signal Engine</span>
                         <span class="widget-version">v8.2 • Это профессиональный торговый терминал для криптовалют, который объединяет 7 лучших технических индикаторов в единую систему генерации сигналов. Приложение работает в реальном времени, анализируя данные с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin).</span>
                         <span class="widget-version">Если данных достаточно (>50 свечей) → отображаются все 7 индикаторов /// Для полной загрузки всех индикаторов необходимо время (> 1часа)</span>
-                        <span class="widget-version">🔊 Звуковой сигнал при ≥75% (повтор каждые 10с)</span>
+                        <span class="widget-version">Звуковой сигнал при ≥75% (повтор каждые 10с)</span>
                     </div>
                     <div class="widget-status-group">
                         <div class="sound-controls">
