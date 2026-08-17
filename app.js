@@ -50,7 +50,7 @@
     };
 
     // ============================================================
-    //  ЗВУКОВАЯ СИСТЕМА
+    //  ЗВУКОВАЯ СИСТЕМА (исправлена)
     // ============================================================
 
     const SoundSystem = {
@@ -59,8 +59,10 @@
         _isLoaded: false,
         _lastPlayedSignals: new Map(),
         _signalIntervals: new Map(),
+        _initialized: false,
 
         init: function() {
+            if (this._initialized) return this;
             this._audio = new Audio();
             this._audio.preload = 'auto';
             this._audio.src = CONFIG.sound.filePath;
@@ -72,10 +74,13 @@
             
             this._audio.addEventListener('error', () => {
                 console.warn('⚠️ Не удалось загрузить звук:', CONFIG.sound.filePath);
-                this._audio.src = './' + CONFIG.sound.filePath;
+                if (!this._audio.src.startsWith('./')) {
+                    this._audio.src = './' + CONFIG.sound.filePath;
+                }
             });
 
             this.loadState();
+            this._initialized = true;
             return this;
         },
 
@@ -111,7 +116,7 @@
 
             const intervalId = setInterval(() => {
                 const currentSignal = state.previousSignals.get(asset);
-                if (currentSignal === `${signalType}-${confidence}`) {
+                if (currentSignal && currentSignal.startsWith(signalType)) {
                     this.playSound(signalType, asset, confidence);
                 } else {
                     this.stopRepeatingSignal(asset);
@@ -194,7 +199,7 @@
     };
 
     // ============================================================
-    //  СОСТОЯНИЕ
+    //  СОСТОЯНИЕ (исправлено: добавлен loadingStatus)
     // ============================================================
 
     const state = {
@@ -211,7 +216,8 @@
         signalThrottle: null,
         currentTF: '1h',
         historyLoaded: false,
-        previousSignals: new Map()
+        previousSignals: new Map(),
+        loadingStatus: {}
     };
 
     const els = {};
@@ -390,8 +396,7 @@
         let rawCandles = state.marketData.get(asset);
 
         if (!rawCandles || rawCandles.length < CONFIG.minCandlesRequired) {
-            if (!state.loadingStatus?.[asset]) {
-                if (!state.loadingStatus) state.loadingStatus = {};
+            if (!state.loadingStatus[asset]) {
                 state.loadingStatus[asset] = true;
                 loadAssetData(asset).then(() => {
                     state.loadingStatus[asset] = false;
@@ -671,10 +676,14 @@
     }
 
     // ============================================================
-    //  WEB SOCKET
+    //  WEB SOCKET (исправлено: закрытие старого сокета при переподключении)
     // ============================================================
 
     function setupWebSocket() {
+        if (state.ws && (state.ws.readyState === WebSocket.OPEN || state.ws.readyState === WebSocket.CONNECTING)) {
+            state.ws.close();
+        }
+
         const streams = CONFIG.assets.map(a => `${CONFIG.symbolMap[a].toLowerCase()}@kline_1m`).join('/');
         try {
             state.ws = new WebSocket(`${CONFIG.wsEndpoint}/${streams}`);
@@ -782,7 +791,6 @@
 
         if (direction === 'NEUTRAL' || confidence < 60) {
             card.classList.add('neutral');
-            // Останавливаем звук если сигнал пропал
             if (state.previousSignals.get(asset)) {
                 SoundSystem.stopRepeatingSignal(asset);
                 state.previousSignals.delete(asset);
@@ -1510,17 +1518,8 @@
     }
 
     // ============================================================
-    //  УПРАВЛЕНИЕ
+    //  УПРАВЛЕНИЕ (удалена функция setupCacheCleanup)
     // ============================================================
-
-    function setupCacheCleanup() {
-        setInterval(() => {
-            const now = Date.now();
-            for (const [key, data] of cache) {
-                if (now - data.timestamp > CONFIG.cacheTTL) cache.delete(key);
-            }
-        }, 60000);
-    }
 
     function startPeriodicUpdate() {
         state.updateInterval = setInterval(() => {
@@ -1536,7 +1535,6 @@
         state.signals.clear();
         state.indicatorScores.clear();
         state.tradeHistory = [];
-        cache.clear();
         SoundSystem.clearAllIntervals();
         console.log('🧹 Виджет уничтожен');
     }
@@ -1551,7 +1549,6 @@
         SoundSystem.init();
         renderWidget();
         setupWebSocket();
-        setupCacheCleanup();
         startPeriodicUpdate();
 
         await loadHistoricalData();
@@ -1607,6 +1604,7 @@
 
     window.addEventListener('beforeunload', function() {
         if (state.ws) state.ws.close();
+        SoundSystem.clearAllIntervals();
     });
 
 })();
