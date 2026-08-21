@@ -332,7 +332,11 @@ class DataLoader {
             console.warn(
               `❌ ${ex.id} вернул ${resp.status} для ${formattedSymbol}`
             );
-            if (resp.status >= 400 && resp.status < 500 && resp.status !== 429) {
+            if (
+              resp.status >= 400 &&
+              resp.status < 500 &&
+              resp.status !== 429
+            ) {
               break;
             }
             continue;
@@ -1044,12 +1048,7 @@ class Backtester {
           position = null;
         } else if (isOpposite) {
           trades.push(
-            this._closePosition(
-              position,
-              price,
-              current.time,
-              "reverse_signal"
-            )
+            this._closePosition(position, price, current.time, "reverse_signal")
           );
           position = null;
         }
@@ -1394,7 +1393,7 @@ class UIRenderer {
                 <!-- Свёрнутая документация -->
                 <div class="docs-wrapper">
                     <details>
-                        <summary>📖 Документация</summary>
+                        <summary>Документация</summary>
                         <div class="docs-content">
                             ${this._buildDocs()}
                         </div>
