@@ -1339,7 +1339,7 @@ class UIRenderer {
                                 🔊 <span class="sound-label">Вкл</span>
                             </button>
                             <span class="sound-status" id="sound-status">
-                                <span class="sound-indicator on"></span> Ding-ding.mp3
+                                <span class="sound-indicator on"></span> 
                             </span>
                         </div>
                         <span class="ws-status" id="ws-status">⚡ Подключение...</span>
