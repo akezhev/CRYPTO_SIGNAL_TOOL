@@ -815,6 +815,18 @@ class SignalGenerator {
     } else if (rsi > 60) {
       sellScore += 5;
       scores.rsi = -5;
+    } else if (rsi > 80) {
+      sellScore += 20;
+      scores.rsi = -20;
+    } else if (rsi < 20) {
+      buyScore += 20;
+      scores.rsi = 20;
+    } else if (rsi > 90) {
+      sellScore += 30;
+      scores.rsi = -30;
+    } else if (rsi < 10) {
+      buyScore += 30;
+      scores.rsi = 30;
     } else scores.rsi = 0;
 
     // 2. MACD
