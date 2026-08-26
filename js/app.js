@@ -1361,7 +1361,7 @@ class UIRenderer {
             <div class="crypto-signal-widget">
                 <div class="widget-header">
                     <div>
-                        <span class="widget-title">🧠 Crypto Signal Engine</span>
+                        <span class="widget-title">🧠 Crypto Signal Tool</span>
                         <span class="widget-version">v9.1 • 7 индикаторов • Звук при ≥75%</span>
                     </div>
                     <div class="widget-status-group">
