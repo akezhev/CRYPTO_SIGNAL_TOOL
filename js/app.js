@@ -25,8 +25,11 @@ const CONFIG = {
   minCandlesRequired: 50,
   trading: {
     minConfidence: 65,
-    minProfitPercent: 1.0,
-    maxLossPercent: 2.0,
+    // R/R > 1: стоп уже тейка (1–1.5× ATR vs 2–3× ATR)
+    stopAtrMult: 1.25,
+    takeProfitAtrMult: 2.5,
+    minProfitPercent: 2.0,
+    maxLossPercent: 1.0,
     positionSize: 1000,
   },
   sound: {
@@ -928,6 +931,7 @@ class SignalGenerator {
       direction,
       confidence: Math.round(confidence),
       price: ind.close,
+      atr: ind.atr,
       timestamp: Date.now(),
       indicators: {
         rsi: Math.round(ind.rsi),
@@ -984,6 +988,7 @@ class SignalGenerator {
       direction: "NEUTRAL",
       confidence: 0,
       price: 0,
+      atr: 0,
       timestamp: Date.now(),
       indicators: {
         rsi: 0,
@@ -1034,21 +1039,20 @@ class Backtester {
       const signal = this.signalGen.generate(asset, tf, windowCandles);
 
       if (position) {
-        const profitPercent = ((price - entryPrice) / entryPrice) * 100;
-        const currentProfit =
-          direction === "BUY" ? profitPercent : -profitPercent;
+        const move =
+          direction === "BUY" ? price - entryPrice : entryPrice - price;
         const isOpposite =
           signal &&
           signal.confidence >= config.minConfidence &&
           ((direction === "BUY" && signal.direction === "SELL") ||
             (direction === "SELL" && signal.direction === "BUY"));
 
-        if (currentProfit >= config.minProfitPercent) {
+        if (move >= position.takeProfitDistance) {
           trades.push(
             this._closePosition(position, price, current.time, "take_profit")
           );
           position = null;
-        } else if (currentProfit <= -config.maxLossPercent) {
+        } else if (move <= -position.stopDistance) {
           trades.push(
             this._closePosition(position, price, current.time, "stop_loss")
           );
@@ -1072,6 +1076,7 @@ class Backtester {
         (signal.direction === "BUY" || signal.direction === "SELL") &&
         signal.confidence >= config.minConfidence
       ) {
+        const levels = this._atrExitLevels(price, signal.atr, config);
         position = {
           asset,
           direction: signal.direction,
@@ -1079,6 +1084,8 @@ class Backtester {
           entryTime: current.time,
           entryConfidence: signal.confidence,
           entryIndex: i,
+          stopDistance: levels.stopDistance,
+          takeProfitDistance: levels.takeProfitDistance,
         };
         entryPrice = price;
         entryTime = current.time;
@@ -1121,6 +1128,18 @@ class Backtester {
       totalProfit,
       winRate: (wins / total) * 100,
     };
+  }
+
+  _atrExitLevels(entryPrice, atr, config) {
+    const n = Number(atr);
+    const hasAtr = Number.isFinite(n) && n > 0;
+    const stopDistance = hasAtr
+      ? config.stopAtrMult * n
+      : entryPrice * (config.maxLossPercent / 100);
+    const takeProfitDistance = hasAtr
+      ? config.takeProfitAtrMult * n
+      : entryPrice * (config.minProfitPercent / 100);
+    return { stopDistance, takeProfitDistance };
   }
 
   _closePosition(pos, exitPrice, exitTime, reason) {
