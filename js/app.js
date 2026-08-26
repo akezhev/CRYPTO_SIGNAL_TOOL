@@ -1393,7 +1393,7 @@ class UIRenderer {
                 <div class="widget-footer">
                     <div class="footer-stat">⚡ <span id="signal-count">0</span> сигналов</div>
                     <div class="footer-stat">🎯 >75% Сильный</div>
-                    <div class="footer-stat">📊 <span id="cache-status">Кэш</span></div>
+                    <div class="footer-stat">💾 <span id="cache-status">Кэш</span></div>
                     <div class="footer-stat">🔗 <span id="connection-info">WebSocket</span></div>
                     <div class="footer-stat">📈 <span id="history-status">История</span></div>
                     <div class="footer-stat">🪙 <span id="asset-count">${
