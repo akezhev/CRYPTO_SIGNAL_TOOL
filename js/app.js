@@ -1507,7 +1507,7 @@ class UIRenderer {
                     <div class="footer-stat">💾 <span id="cache-status">Кэш</span></div>
                     <div class="footer-stat">🔗 <span id="connection-info">WebSocket</span></div>
                     <div class="footer-stat">📈 <span id="history-status">История</span></div>
-                    <div class="footer-stat">🪙 <span id="asset-count">${
+                    <div class="footer-stat">⚡<span id="asset-count">${
                       CONFIG.assets.length
                     } активов</span></div>
                     <div class="footer-stat">🔊 <span id="sound-status-footer">Звук: Вкл</span></div>
@@ -2183,7 +2183,7 @@ class App {
         console.warn(`⚠️ Нет данных для ${asset}`);
       }
     }
-    this.ui.setCacheStatus(`📊 ${loaded}/${CONFIG.assets.length} активов`);
+    this.ui.setCacheStatus(`${loaded}/${CONFIG.assets.length} активов`);
     this._historyLoaded = loaded > 0;
     this._loadedTF = tf;
     if (loaded === 0) {
