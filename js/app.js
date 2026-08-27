@@ -18,13 +18,17 @@ const CONFIG = {
     PAXG: "PAXGUSDT",
   },
   timeframes: ["15m", "1h", "2h", "4h", "1d"],
+  tfMinutes: { "15m": 15, "1h": 60, "2h": 120, "4h": 240, "1d": 1440 },
   defaultTF: "1h",
   wsEndpoint: "wss://stream.binance.com:9443/ws",
   maxCandles: 1000,
   historyCandles: 1500,
   minCandlesRequired: 50,
   trading: {
-    minConfidence: 65,
+    minConfidence: 75,
+    rsiOverbought: 70,
+    rsiOversold: 30,
+    requireHtfConfirm: true,
     // R/R > 1: стоп уже тейка (1–1.5× ATR vs 2–3× ATR)
     stopAtrMult: 1.25,
     takeProfitAtrMult: 2.5,
@@ -914,15 +918,35 @@ class SignalGenerator {
 
     const netScore = buyScore - sellScore;
     const confidence = utils.clamp(Math.abs(netScore), 0, 100);
+    const cfg = CONFIG.trading;
+    const buyAligned = this._isEntryAligned(ind, "BUY");
+    const sellAligned = this._isEntryAligned(ind, "SELL");
+    const htfBuy = this._htfConfirms(tf, candles, "BUY");
+    const htfSell = this._htfConfirms(tf, candles, "SELL");
+
     let direction = "NEUTRAL";
-    if (netScore > 30 && ind.trendStrength > -1) direction = "BUY";
-    else if (netScore < -30 && ind.trendStrength < 1) direction = "SELL";
+    if (
+      buyAligned &&
+      htfBuy &&
+      confidence >= cfg.minConfidence &&
+      netScore > 30
+    ) {
+      direction = "BUY";
+    } else if (
+      sellAligned &&
+      htfSell &&
+      confidence >= cfg.minConfidence &&
+      netScore < -30
+    ) {
+      direction = "SELL";
+    }
 
     const actionProbs = this._calcActionProbs(
       buyScore,
       sellScore,
       ind.trendStrength,
-      ind.bbWidth
+      ind.bbWidth,
+      direction
     );
 
     return {
@@ -932,6 +956,9 @@ class SignalGenerator {
       confidence: Math.round(confidence),
       price: ind.close,
       atr: ind.atr,
+      htfTimeframe: this._htfFor(tf),
+      htfConfirmed:
+        direction === "BUY" ? htfBuy : direction === "SELL" ? htfSell : false,
       timestamp: Date.now(),
       indicators: {
         rsi: Math.round(ind.rsi),
@@ -948,7 +975,68 @@ class SignalGenerator {
     };
   }
 
-  _calcActionProbs(buyScore, sellScore, trendStrength, bbWidth) {
+  _isEntryAligned(ind, side) {
+    const rsi = ind.rsi;
+    const macdRising = ind.macdHist > ind.macdPrevHist;
+    const macdFalling = ind.macdHist < ind.macdPrevHist;
+    const cfg = CONFIG.trading;
+    if (side === "BUY") {
+      return (
+        ind.close > ind.ema50 &&
+        macdRising &&
+        rsi < cfg.rsiOverbought
+      );
+    }
+    return (
+      ind.close < ind.ema50 &&
+      macdFalling &&
+      rsi > cfg.rsiOversold
+    );
+  }
+
+  _htfFor(tf) {
+    const minutes = CONFIG.tfMinutes[tf] || 60;
+    if (minutes < CONFIG.tfMinutes["4h"]) return "4h";
+    if (minutes < CONFIG.tfMinutes["1d"]) return "1d";
+    return null;
+  }
+
+  _htfConfirms(tf, candles, side) {
+    if (!CONFIG.trading.requireHtfConfirm) return true;
+    const htf = this._htfFor(tf);
+    if (!htf) return true;
+    const agg = this._aggregate(candles, htf);
+    if (!agg || agg.length < CONFIG.minCandlesRequired) return false;
+    const ind = this.indicatorCalc.calculateAll(agg, htf);
+    if (!ind) return false;
+    return side === "BUY" ? ind.close > ind.ema50 : ind.close < ind.ema50;
+  }
+
+  _aggregate(candles, tf) {
+    const minutes = CONFIG.tfMinutes[tf] || 60;
+    const agg = [];
+    let current = null;
+    for (const c of candles) {
+      if (!current) {
+        current = { ...c };
+        continue;
+      }
+      const diff = (c.time - current.time) / (60 * 1000);
+      if (diff >= minutes) {
+        agg.push(current);
+        current = { ...c };
+      } else {
+        current.high = Math.max(current.high, c.high);
+        current.low = Math.min(current.low, c.low);
+        current.close = c.close;
+        current.volume += c.volume;
+      }
+    }
+    if (current) agg.push(current);
+    return agg;
+  }
+
+  _calcActionProbs(buyScore, sellScore, trendStrength, bbWidth, direction) {
     let buyProb = Math.min((buyScore / 100) * 100, 100);
     let sellProb = Math.min((sellScore / 100) * 100, 100);
     if (bbWidth < 0.05) {
@@ -964,6 +1052,8 @@ class SignalGenerator {
         buyProb *= 0.7;
       }
     }
+    if (direction !== "BUY") buyProb *= 0.35;
+    if (direction !== "SELL") sellProb *= 0.35;
     let waitProb = Math.max(100 - (buyProb + sellProb), 0);
     return {
       wait: Math.round(utils.clamp(waitProb, 0, 100)),
@@ -989,6 +1079,8 @@ class SignalGenerator {
       confidence: 0,
       price: 0,
       atr: 0,
+      htfTimeframe: this._htfFor(tf),
+      htfConfirmed: false,
       timestamp: Date.now(),
       indicators: {
         rsi: 0,
