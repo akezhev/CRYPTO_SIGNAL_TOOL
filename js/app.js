@@ -981,17 +981,9 @@ class SignalGenerator {
     const macdFalling = ind.macdHist < ind.macdPrevHist;
     const cfg = CONFIG.trading;
     if (side === "BUY") {
-      return (
-        ind.close > ind.ema50 &&
-        macdRising &&
-        rsi < cfg.rsiOverbought
-      );
+      return ind.close > ind.ema50 && macdRising && rsi < cfg.rsiOverbought;
     }
-    return (
-      ind.close < ind.ema50 &&
-      macdFalling &&
-      rsi > cfg.rsiOversold
-    );
+    return ind.close < ind.ema50 && macdFalling && rsi > cfg.rsiOversold;
   }
 
   _htfFor(tf) {
@@ -2207,7 +2199,7 @@ class App {
       allTrades,
       this.backtester.computeStats(allTrades)
     );
-    this.ui.setHistoryStatus(`✅ ${allTrades.length} сделок`);
+    this.ui.setHistoryStatus(`${allTrades.length} сделок`);
   }
 
   _tfToMs(tf) {
