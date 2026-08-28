@@ -924,6 +924,10 @@ class SignalGenerator {
     const htfBuy = this._htfConfirms(tf, candles, "BUY");
     const htfSell = this._htfConfirms(tf, candles, "SELL");
 
+    let scoreDirection = "NEUTRAL";
+    if (netScore > 30 && ind.trendStrength > -1) scoreDirection = "BUY";
+    else if (netScore < -30 && ind.trendStrength < 1) scoreDirection = "SELL";
+
     let direction = "NEUTRAL";
     if (
       buyAligned &&
@@ -945,14 +949,14 @@ class SignalGenerator {
       buyScore,
       sellScore,
       ind.trendStrength,
-      ind.bbWidth,
-      direction
+      ind.bbWidth
     );
 
     return {
       asset,
       timeframe: tf,
       direction,
+      scoreDirection,
       confidence: Math.round(confidence),
       price: ind.close,
       atr: ind.atr,
@@ -1028,7 +1032,7 @@ class SignalGenerator {
     return agg;
   }
 
-  _calcActionProbs(buyScore, sellScore, trendStrength, bbWidth, direction) {
+  _calcActionProbs(buyScore, sellScore, trendStrength, bbWidth) {
     let buyProb = Math.min((buyScore / 100) * 100, 100);
     let sellProb = Math.min((sellScore / 100) * 100, 100);
     if (bbWidth < 0.05) {
@@ -1044,8 +1048,6 @@ class SignalGenerator {
         buyProb *= 0.7;
       }
     }
-    if (direction !== "BUY") buyProb *= 0.35;
-    if (direction !== "SELL") sellProb *= 0.35;
     let waitProb = Math.max(100 - (buyProb + sellProb), 0);
     return {
       wait: Math.round(utils.clamp(waitProb, 0, 100)),
@@ -1068,6 +1070,7 @@ class SignalGenerator {
       asset,
       timeframe: tf || "1h",
       direction: "NEUTRAL",
+      scoreDirection: "NEUTRAL",
       confidence: 0,
       price: 0,
       atr: 0,
@@ -1800,23 +1803,24 @@ class UIRenderer {
     if (priceEl && signal.price)
       priceEl.textContent = `$${signal.price.toFixed(2)}`;
 
-    // Направление и уверенность
+    // Направление и уверенность (на карточке — общий сигнал по баллам)
     const dirEl = card.querySelector(".signal-direction");
     const confEl = card.querySelector(".signal-confidence");
+    const displayDir = signal.scoreDirection || signal.direction;
     if (dirEl) {
       let icon = "⏸️",
         color = "#94a3b8",
         bg = "rgba(255,255,255,0.05)";
-      if (signal.direction === "BUY") {
+      if (displayDir === "BUY") {
         icon = "📈";
         color = "#34d399";
         bg = "rgba(52,211,153,0.15)";
-      } else if (signal.direction === "SELL") {
+      } else if (displayDir === "SELL") {
         icon = "📉";
         color = "#f87171";
         bg = "rgba(248,113,113,0.15)";
       }
-      dirEl.textContent = `${icon} ${signal.direction}`;
+      dirEl.textContent = `${icon} ${displayDir}`;
       dirEl.style.background = bg;
       dirEl.style.color = color;
     }
@@ -1839,8 +1843,8 @@ class UIRenderer {
     // Action probabilities
     this._updateActions(card, signal.actionProbabilities);
 
-    // Бейдж и мерцание
-    this._updateBadgeAndGlow(card, signal.direction, signal.confidence);
+    // Бейдж и мерцание — по общему сигналу (баллы), не по фильтру входа
+    this._updateBadgeAndGlow(card, displayDir, signal.confidence);
 
     // Футер
     const tfEl = card.querySelector(".tf-signal");
@@ -1852,9 +1856,9 @@ class UIRenderer {
     if (
       this.soundManager &&
       signal.confidence >= CONFIG.sound.threshold &&
-      signal.direction !== "NEUTRAL"
+      displayDir !== "NEUTRAL"
     ) {
-      const signalType = signal.direction;
+      const signalType = displayDir;
       const currentKey = `${asset}-${signalType}-${signal.confidence}`;
       const prevKey = this._lastSignalKey?.[asset];
       if (prevKey !== currentKey) {
@@ -2276,7 +2280,10 @@ class App {
       if (signal) {
         this.signals.set(asset, signal);
         this.ui.updateSignal(asset, signal);
-        if (signal.direction !== "NEUTRAL" && signal.confidence >= 60)
+        if (
+          (signal.scoreDirection || signal.direction) !== "NEUTRAL" &&
+          signal.confidence >= 60
+        )
           activeCount++;
       }
     }
