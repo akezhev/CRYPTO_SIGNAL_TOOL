@@ -1475,6 +1475,8 @@ class UIRenderer {
                       )
                       .join("")}
                 </div>
+                <div class="stat-item">⚡ <span id="signal-count">0</span> сигналов</div>
+              
 
                 <div class="signal-grid" id="signal-grid">
                     ${assetCards}
