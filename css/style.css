@@ -216,7 +216,7 @@ body {
    СЧЕТЧИК СИГНАЛОВ
 ============================================================ */
 .signal-count-item {
-  font-size: 12px;
+  font-size: 16px;
   color: #94a3b8;
   font-weight: 400;
   background: rgba(255, 255, 255, 0.05);
@@ -227,6 +227,7 @@ body {
   gap: 6px;
   align-items: center;
   justify-content: flex-end;
+  width: 100%;
 }
 
 /* ============================================================

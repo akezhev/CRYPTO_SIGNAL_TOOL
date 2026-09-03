@@ -1474,10 +1474,9 @@ class UIRenderer {
                           }" data-tf="${tf}">${tf}</button>`
                       )
                       .join("")}
+                    <div class="signal-count-item">⚡ <span id="signal-count">0</span> сигналов</div>
                 </div>
-                <div class="signal-count-item">⚡ <span id="signal-count">0</span> сигналов</div>
               
-
                 <div class="signal-grid" id="signal-grid">
                     ${assetCards}
                 </div>
@@ -1499,7 +1498,6 @@ class UIRenderer {
                 </div>
 
                 <div class="widget-footer">
-                    <div class="footer-stat">⚡ <span id="signal-count">0</span> сигналов</div>
                     <div class="footer-stat">🎯 >75% Сильный</div>
                     <div class="footer-stat">💾 <span id="cache-status">Кэш</span></div>
                     <div class="footer-stat">🔗 <span id="connection-info">WebSocket</span></div>
