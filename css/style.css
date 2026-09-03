@@ -218,16 +218,16 @@ body {
 .signal-count-item {
   font-size: 16px;
   color: #94a3b8;
-  font-weight: 400;
+  font-weight: 500;
   background: rgba(255, 255, 255, 0.05);
   padding: 4px 12px;
-  margin-bottom: 16px;
+  width: 100%;
+  margin-bottom: 5px;
   border-radius: 20px;
   display: flex;
-  gap: 6px;
   align-items: center;
   justify-content: flex-end;
-  width: 100%;
+  gap: 6px;
 }
 
 /* ============================================================
