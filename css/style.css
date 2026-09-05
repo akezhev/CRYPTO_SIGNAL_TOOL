@@ -190,7 +190,7 @@ body {
 .tf-btn {
   padding: 6px 16px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgb(85, 178, 236);
   background: rgba(255, 255, 255, 0.03);
   color: #94a3b8;
   font-size: 12px;
@@ -221,7 +221,7 @@ body {
 
   color: #94a3b8;
   background: #150121;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(2, 42, 175, 0.08);
   border-radius: 20px;
 
   padding: 4px 12px;
