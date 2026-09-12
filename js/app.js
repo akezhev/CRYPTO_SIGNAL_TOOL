@@ -1505,7 +1505,7 @@ class UIRenderer {
                     <div class="footer-stat">⚡<span id="asset-count">${
                       CONFIG.assets.length
                     } активов</span></div>
-                    <div class="footer-stat">🔊 <span id="sound-status-footer">Звук: Вкл</span></div>
+
                 </div>
 
                 <!-- Свёрнутая документация -->
