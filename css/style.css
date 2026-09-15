@@ -9,6 +9,21 @@
 
 body {
   background: #150121;
+  background-image: url("css/img/bg.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-blend-mode: multiply;
+  opacity: 0.5;
+  filter: blur(10px);
+  -webkit-filter: blur(10px);
+  -moz-filter: blur(10px);
+  -o-filter: blur(10px);
+  -ms-filter: blur(10px);
+  filter: blur(10px);
+  filter: blur(10px);
+
   display: flex;
   justify-content: center;
   align-items: flex-start;
