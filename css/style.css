@@ -8,7 +8,7 @@
 }
 
 body {
-  /* background: #150121; */
+  background: #150121;
   background-image: url("../img/crypto_cosmos_02.png");
   background-size: cover;
   background-position: center;
@@ -39,7 +39,6 @@ body {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     sans-serif;
   background: rgba(16, 24, 40, 0.92);
-  opacity: 0.7;
 
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
