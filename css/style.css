@@ -9,13 +9,12 @@
 
 body {
   /* background: #150121; */
-  background-image: url("img/crypto_cosmos_02.png");
+  background-image: url("../img/crypto_cosmos_02.png");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   background-attachment: fixed;
   /* background-blend-mode: multiply; */
-  opacity: 0.5;
 
   display: flex;
   justify-content: center;
