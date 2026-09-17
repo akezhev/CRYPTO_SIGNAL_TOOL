@@ -1448,8 +1448,9 @@ class UIRenderer {
             <div class="crypto-signal-widget">
                 <div class="widget-header">
                     <div>
-                        <span class="widget-title">🧠 Crypto Signal Tool</span>
-                        <span class="widget-version">v9.1 • 7 индикаторов • Звук при ≥75%</span>
+                        <span class="widget-title">🧠 CRYPTO SIGNAL TOOL</span>
+                        <span class="widget-version">v9.1 • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin)
+ • Звук при ≥75%</span>
                     </div>
                     <div class="widget-status-group">
                         <div class="sound-controls">
@@ -1511,7 +1512,7 @@ class UIRenderer {
                 <!-- Свёрнутая документация -->
                 <div class="docs-wrapper">
                     <details>
-                        <summary>Документация</summary>
+                        <summary>ДОКУМЕНТАЦИЯ</summary>
                         <div class="docs-content">
                             ${this._buildDocs()}
                         </div>

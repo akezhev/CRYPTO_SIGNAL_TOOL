@@ -46,7 +46,7 @@ body {
   padding: 24px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgb(0, 238, 255);
   color: #e2e8f0;
   transition: all 0.3s ease;
 }
@@ -61,12 +61,27 @@ body {
 }
 
 .widget-title {
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 700;
   background: linear-gradient(135deg, #60a5fa, #a78bfa);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+
+  text-shadow: 0 0 5px #ff005e, 0 0 10px #ff005e, 0 0 20px #ff005e,
+    0 0 40px #ff005e, 0 0 80px #ff005e;
+  animation: glow 1.5s infinite alternate;
+
+  @keyframes glow {
+    0% {
+      text-shadow: 0 0 5px #ff005e, 0 0 10px #ff005e, 0 0 20px #ff005e,
+        0 0 40px #ff005e, 0 0 80px #ff005e;
+    }
+    100% {
+      text-shadow: 0 0 10px #00d4ff, 0 0 20px #00d4ff, 0 0 40px #00d4ff,
+        0 0 80px #00d4ff, 0 0 160px #00d4ff;
+    }
+  }
 }
 
 .widget-version {
