@@ -46,7 +46,7 @@ body {
   padding: 24px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  border: 1px solid rgb(0, 238, 255);
+  border: 1px solid #00d4ff;
   color: #e2e8f0;
   transition: all 0.3s ease;
 }
@@ -85,7 +85,7 @@ body {
 
 .widget-version {
   font-size: 12px;
-  color: #94a3b8;
+  color: #00d4ff;
   margin-left: 12px;
   font-weight: 400;
   -webkit-text-fill-color: #94a3b8;
@@ -122,7 +122,7 @@ body {
   align-items: center;
   gap: 10px;
   background: rgba(255, 255, 255, 0.05);
-  padding: 6px 12px;
+  /* padding: 6px 12px; */
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -133,7 +133,7 @@ body {
   color: #94a3b8;
   font-size: 20px;
   cursor: pointer;
-  padding: 4px 8px;
+  /* padding: 4px 8px; */
   border-radius: 8px;
   transition: all 0.3s ease;
   font-family: inherit;
@@ -143,7 +143,7 @@ body {
 }
 
 .sound-toggle:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(1, 147, 204, 0.08);
   transform: scale(1.05);
 }
 
@@ -262,13 +262,13 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 15px;
 }
 
 .signal-card {
   background: rgba(255, 255, 255, 0.03);
   border-radius: 16px;
-  padding: 16px;
+  padding: 15px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   transition: all 0.3s ease;
   cursor: default;

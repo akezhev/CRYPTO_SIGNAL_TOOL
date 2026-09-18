@@ -1484,7 +1484,7 @@ class UIRenderer {
 
                 <div class="trade-history-section">
                     <div class="trade-history-header">
-                        <div class="trade-history-title">📊 История торговли (backtesting) стратегии на исторических данных. Виджет симулирует торговлю, используя те же самые 7 индикаторов, и показывает, как бы вы заработали или потеряли деньги, если бы следовали сигналам в прошлом.</div>
+                        <div class="trade-history-title">📊 ИСТОРИЯ ТОРГОВЛИ (backtesting) стратегии на исторических данных. Виджет симулирует торговлю, используя те же самые 7 индикаторов, и показывает, как бы вы заработали или потеряли деньги, если бы следовали сигналам в прошлом.</div>
                         <div class="trade-history-stats" id="trade-stats">
                             <div class="stat-item">Всего: <span class="stat-value total" id="stat-total">0</span></div>
                             <div class="stat-item">✅ Win: <span class="stat-value win" id="stat-wins">0</span></div>
