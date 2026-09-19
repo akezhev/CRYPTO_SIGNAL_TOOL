@@ -8,6 +8,7 @@
 }
 
 body {
+  position: relative;
   background: #150121;
   background-image: url("../img/crypto_cosmos_02.png");
   background-size: cover;
@@ -24,6 +25,41 @@ body {
     sans-serif;
   padding: 20px;
   margin: 0;
+}
+
+/* Анимация BTC.png - Оверлей BTC.png — скроллится со страницей, адаптивный */
+.btc-overlay {
+  position: absolute;
+  right: clamp(12px, 3vw, 48px); /* адаптивный отступ справа */
+  bottom: clamp(12px, 3vw, 48px); /* адаптивный отступ снизу */
+
+  /* Адаптивный размер: минимум 56px, оптимум 12vw, максимум 160px */
+  width: clamp(56px, 12vw, 160px);
+  height: clamp(56px, 12vw, 160px);
+
+  background: url("../img/BTC.png") center / contain no-repeat;
+
+  pointer-events: none; /* не мешает кликам */
+  z-index: 10;
+  will-change: transform; /* плавность на GPU */
+  transform-origin: center center;
+  animation: btc-spin 20s linear infinite;
+}
+
+@keyframes btc-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Доступность: отключаем анимацию при системной настройке reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .btc-overlay {
+    animation: none;
+  }
 }
 
 #signal-widget {
