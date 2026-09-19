@@ -8,6 +8,7 @@
 }
 
 body {
+  position: relative;
   background: #150121;
   background-image: url("../img/crypto_cosmos_02.png");
   background-size: cover;
