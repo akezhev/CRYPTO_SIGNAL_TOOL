@@ -8,7 +8,6 @@
 }
 
 body {
-  position: relative;
   background: #150121;
   background-image: url("../img/crypto_cosmos_02.png");
   background-size: cover;
@@ -25,38 +24,6 @@ body {
     sans-serif;
   padding: 20px;
   margin: 0;
-}
-
-/* Наложение BTC.png поверх фонового изображения body */
-.btc-overlay {
-  position: absolute; /* фиксируем относительно окна браузера */
-  right: 230px; /* отступ от правого края — настройте под себя */
-  bottom: 40px; /* отступ от нижнего края — настройте под себя */
-  width: 200px; /* размер оверлея — настройте под себя */
-  height: 200px;
-  background: url("../img/BTC.png") center / contain no-repeat;
-  pointer-events: none; /* не перехватывает клики */
-  z-index: 10; /* поверх фона */
-  will-change: transform; /* подсказка GPU — плавная анимация */
-  transform-origin: center center;
-  animation: btc-spin 20s linear infinite;
-}
-
-/* Цикличное медленное вращение по часовой стрелке */
-@keyframes btc-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Доступность: уважаем настройки пользователя */
-@media (prefers-reduced-motion: reduce) {
-  .btc-overlay {
-    animation: none;
-  }
 }
 
 #signal-widget {
