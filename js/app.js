@@ -1,6 +1,6 @@
 // ============================================================
-//  МОДУЛЬ CRYPTO SIGNAL TOOL (v9.2)
-//  + Fear & Greed Index widget в строке таймфреймов
+//  МОДУЛЬ CRYPTO SIGNAL TOOL (v9.3)
+//  + Fear & Greed Index (рабочая версия с fallback)
 // ============================================================
 
 // ---------- Конфигурация ----------
@@ -50,7 +50,7 @@ const CONFIG = {
     atrPeriod: 14,
   },
   fearGreed: {
-    intervalMs: 5 * 60 * 1000, // 5 минут
+    intervalMs: 5 * 60 * 1000,
     neutralFallback: 50,
   },
 };
@@ -78,7 +78,7 @@ const utils = {
   },
 };
 
-// ---------- Менеджер звука (с fallback) ----------
+// ---------- Менеджер звука ----------
 class SoundManager {
   constructor() {
     this._enabled = true;
@@ -88,10 +88,8 @@ class SoundManager {
     this._audio.src = CONFIG.sound.filePath;
     this._lastPlayed = new Map();
     this._intervals = new Map();
-
     this._useFallback = false;
     this._audioCtx = null;
-
     this._init();
   }
 
@@ -108,9 +106,7 @@ class SoundManager {
       this._loaded = true;
       this._initWebAudio();
     });
-    if (this._audio.readyState >= 3) {
-      this._loaded = true;
-    }
+    if (this._audio.readyState >= 3) this._loaded = true;
     this._loadState();
   }
 
@@ -142,9 +138,7 @@ class SoundManager {
       );
       osc.start(this._audioCtx.currentTime);
       osc.stop(this._audioCtx.currentTime + 0.2);
-    } catch (e) {
-      /* игнорируем */
-    }
+    } catch (e) {}
   }
 
   play(signalType, asset, confidence) {
@@ -156,9 +150,8 @@ class SoundManager {
     this._lastPlayed.set(key, now);
 
     try {
-      if (this._useFallback) {
-        this._playFallback();
-      } else {
+      if (this._useFallback) this._playFallback();
+      else {
         this._audio.currentTime = 0;
         this._audio.play().catch(() => {});
       }
@@ -166,9 +159,7 @@ class SoundManager {
       for (const [k, t] of this._lastPlayed) {
         if (now - t > 300000) this._lastPlayed.delete(k);
       }
-    } catch (e) {
-      /* ignore */
-    }
+    } catch (e) {}
   }
 
   startRepeating(asset, signalType, confidence) {
@@ -249,7 +240,6 @@ class DataLoader {
       case "mexc":
         return symbol;
       case "kucoin":
-        return symbol.replace("USDT", "-USDT").replace("BUSD", "-BUSD");
       case "okx":
         return symbol.replace("USDT", "-USDT").replace("BUSD", "-BUSD");
       case "coinbase":
@@ -338,13 +328,8 @@ class DataLoader {
             console.warn(
               `❌ ${ex.id} вернул ${resp.status} для ${formattedSymbol}`
             );
-            if (
-              resp.status >= 400 &&
-              resp.status < 500 &&
-              resp.status !== 429
-            ) {
+            if (resp.status >= 400 && resp.status < 500 && resp.status !== 429)
               break;
-            }
             continue;
           }
 
@@ -365,9 +350,8 @@ class DataLoader {
             `⚠️ Попытка ${attempt + 1} для ${ex.id} не удалась:`,
             e.message
           );
-          if (attempt < this.maxRetries - 1) {
+          if (attempt < this.maxRetries - 1)
             await utils.sleep(1000 * (attempt + 1));
-          }
         }
       }
     }
@@ -580,7 +564,6 @@ class IndicatorCalculator {
     const atr = atrArr.length ? atrArr[atrArr.length - 1] : 0.01;
 
     const poc = this._poc(candles);
-
     const cvdArr = this._cvd(candles);
     const cvd = cvdArr.length ? cvdArr[cvdArr.length - 1] : 0;
     const cvdPrev = cvdArr.length > 1 ? cvdArr[cvdArr.length - 2] : cvd;
@@ -911,16 +894,15 @@ class SignalGenerator {
       htfBuy &&
       confidence >= cfg.minConfidence &&
       netScore > 30
-    ) {
+    )
       direction = "BUY";
-    } else if (
+    else if (
       sellAligned &&
       htfSell &&
       confidence >= cfg.minConfidence &&
       netScore < -30
-    ) {
+    )
       direction = "SELL";
-    }
 
     const actionProbs = this._calcActionProbs(
       buyScore,
@@ -961,9 +943,8 @@ class SignalGenerator {
     const macdRising = ind.macdHist > ind.macdPrevHist;
     const macdFalling = ind.macdHist < ind.macdPrevHist;
     const cfg = CONFIG.trading;
-    if (side === "BUY") {
+    if (side === "BUY")
       return ind.close > ind.ema50 && macdRising && rsi < cfg.rsiOverbought;
-    }
     return ind.close < ind.ema50 && macdFalling && rsi > cfg.rsiOversold;
   }
 
@@ -1172,9 +1153,8 @@ class Backtester {
   computeStats(trades) {
     const list = trades || [];
     const total = list.length;
-    if (total === 0) {
+    if (total === 0)
       return { totalTrades: 0, wins: 0, losses: 0, totalProfit: 0, winRate: 0 };
-    }
     const wins = list.filter((t) => t.profit > 0).length;
     const losses = list.filter((t) => t.profit < 0).length;
     const totalProfit = list.reduce((s, t) => s + t.profit, 0);
@@ -1325,18 +1305,16 @@ class WSManager {
 }
 
 // ============================================================
-//  Fear & Greed Index Manager (оптимизированный)
+//  Fear & Greed Index Manager (ИСПРАВЛЕННЫЙ)
+//  - элементы ищутся в start(), а не в конструкторе
+//  - fallback через corsproxy.io
+//  - стартовое значение показывается сразу
 // ============================================================
 class FearGreedManager {
   constructor({ intervalMs = 5 * 60 * 1000, neutralFallback = 50 } = {}) {
     this.intervalMs = intervalMs;
     this.neutralFallback = neutralFallback;
-
-    this._el = {
-      marker: document.getElementById("fngMarker"),
-      value: document.getElementById("fngValue"),
-    };
-
+    this._el = { marker: null, value: null };
     this._lastValue = -1;
     this._rafId = null;
     this._timerId = null;
@@ -1344,7 +1322,16 @@ class FearGreedManager {
   }
 
   start() {
-    if (!this._el.marker || !this._el.value) return;
+    this._el.marker = document.getElementById("fngMarker");
+    this._el.value = document.getElementById("fngValue");
+
+    if (!this._el.marker || !this._el.value) {
+      console.warn("⚠️ F&G: элементы #fngMarker / #fngValue не найдены в DOM");
+      return;
+    }
+
+    console.log("🟢 F&G: start() — элементы найдены, запускаю");
+    this._set(this.neutralFallback);
     this._fetch();
     this._timerId = setInterval(() => this._fetch(), this.intervalMs);
   }
@@ -1358,18 +1345,48 @@ class FearGreedManager {
   async _fetch() {
     if (this._abort) this._abort.abort();
     this._abort = new AbortController();
-    try {
-      const resp = await fetch("https://api.alternative.me/fng/?limit=1", {
-        signal: this._abort.signal,
-        cache: "no-store",
-      });
-      if (!resp.ok) throw new Error("HTTP " + resp.status);
-      const json = await resp.json();
-      const v = parseInt(json?.data?.[0]?.value ?? this.neutralFallback, 10);
-      this._set(Number.isFinite(v) ? v : this.neutralFallback);
-    } catch (e) {
-      // при ошибке — оставляем прошлое значение
+
+    const sources = [
+      "https://api.alternative.me/fng/?limit=1&format=json",
+      "https://corsproxy.io/?" +
+        encodeURIComponent("https://api.alternative.me/fng/?limit=1"),
+      "https://api.allorigins.win/raw?url=" +
+        encodeURIComponent("https://api.alternative.me/fng/?limit=1"),
+    ];
+
+    for (const url of sources) {
+      try {
+        console.log("🌐 F&G: запрос", url);
+        const resp = await fetch(url, {
+          signal: this._abort.signal,
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        });
+        if (!resp.ok) throw new Error("HTTP " + resp.status);
+        const json = await resp.json();
+        const raw = json?.data?.[0]?.value ?? json?.value;
+        const v = parseInt(raw, 10);
+        if (Number.isFinite(v)) {
+          console.log(
+            "✅ F&G:",
+            v,
+            "—",
+            json?.data?.[0]?.value_classification || this._classify(v)
+          );
+          this._set(v);
+          return;
+        }
+      } catch (e) {
+        if (e.name === "AbortError") return;
+        console.warn("⚠️ F&G источник не сработал:", url, e.message);
+      }
     }
+
+    console.warn(
+      "⚠️ F&G: все источники недоступны, оставляю",
+      this.neutralFallback
+    );
+    this._set(this.neutralFallback);
   }
 
   _set(v) {
@@ -1382,7 +1399,7 @@ class FearGreedManager {
       const { marker, value } = this._el;
       if (marker) marker.style.left = clamped + "%";
       if (value) {
-        value.textContent = clamped;
+        value.textContent = `${clamped} ${this._classify(clamped)}`;
         let color = "#fbbf24";
         if (clamped < 25) color = "#ef4444";
         else if (clamped < 45) color = "#f97316";
@@ -1392,6 +1409,14 @@ class FearGreedManager {
         value.style.color = color;
       }
     });
+  }
+
+  _classify(v) {
+    if (v < 25) return "Extreme Fear";
+    if (v < 45) return "Fear";
+    if (v < 55) return "Neutral";
+    if (v < 75) return "Greed";
+    return "Extreme Greed";
   }
 }
 
@@ -1488,8 +1513,7 @@ class UIRenderer {
                 <div class="widget-header">
                     <div>
                         <span class="widget-title">⚛ CRYPTO SIGNAL TOOL ⚛</span>
-                        <span class="widget-version">v9.2 • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin)
- •</span>
+                        <span class="widget-version">v9.3 • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin) •</span>
                     </div>
                     <div class="widget-status-group">
                         <div class="sound-controls">
@@ -1497,7 +1521,7 @@ class UIRenderer {
                                 🔊 <span class="sound-label">Вкл</span>
                             </button>
                             <span class="sound-status" id="sound-status">
-                                <span class="sound-indicator on"></span> 
+                                <span class="sound-indicator on"></span>
                             </span>
                         </div>
                         <span class="ws-status" id="ws-status">⚡ Подключение...</span>
@@ -1523,10 +1547,10 @@ class UIRenderer {
                         <div class="fng-track">
                             <div class="fng-marker" id="fngMarker"></div>
                         </div>
-                        <span class="fng-value" id="fngValue"> -- </span>
+                        <span class="fng-value" id="fngValue">50 Neutral</span>
                     </div>
                 </div>
-              
+
                 <div class="signal-grid" id="signal-grid">
                     ${assetCards}
                 </div>
@@ -1645,15 +1669,9 @@ class UIRenderer {
                     return `
                         <div class="doc-card" data-tf="${tf}">
                             <div class="tf-name">${guide.icon} ${guide.name}</div>
-                            <div style="margin:4px 0; font-size:11px;">
-                                <span class="action-buy">📈 BUY:</span> ${guide.action.BUY}
-                            </div>
-                            <div style="margin:4px 0; font-size:11px;">
-                                <span class="action-sell">📉 SELL:</span> ${guide.action.SELL}
-                            </div>
-                            <div style="margin:4px 0; font-size:11px;">
-                                <span class="action-wait">⏸️ WAIT:</span> ${guide.action.WAIT}
-                            </div>
+                            <div style="margin:4px 0; font-size:11px;"><span class="action-buy">📈 BUY:</span> ${guide.action.BUY}</div>
+                            <div style="margin:4px 0; font-size:11px;"><span class="action-sell">📉 SELL:</span> ${guide.action.SELL}</div>
+                            <div style="margin:4px 0; font-size:11px;"><span class="action-wait">⏸️ WAIT:</span> ${guide.action.WAIT}</div>
                             <div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.05);">
                                 <div><span class="risk-label">Риск:</span> <span class="risk-value">${guide.risk}</span></div>
                                 <div><span class="risk-label">Размер:</span> <span class="risk-value">${guide.positionSize}</span></div>
@@ -1686,68 +1704,20 @@ class UIRenderer {
             <br>
             <span>Данное приложение — это мощный инструмент для принятия торговых решений, но не гарантия прибыли. Это профессиональный торговый терминал для криптовалют, который объединяет 7 лучших технических индикаторов в единую систему генерации сигналов. Приложение работает в реальном времени, анализируя данные с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin)</span>
             <br><br>
-            <span>🧠 РАСШИФРОВКА 7 ИНДИКАТОРОВ
-              <br>
-              1. RSI (Индекс относительной силы) — Вес 15%
-              Значение	Сигнал	Баллы
-              RSI < 30	Перепроданность → BUY	+15
-              RSI < 40	Легкая перепроданность → BUY	+5
-              RSI > 70	Перекупленность → SELL	-15
-              RSI > 60	Легкая перекупленность → SELL	-5
-              40-60	Нейтрально	0
-              <br>
-              2. MACD (12, 26, 9) — Вес 20%
-              Ситуация	Сигнал	Баллы
-              Hist > 0 И MACD > Signal	Бычий момент → BUY	+20
-              Hist < 0 И MACD < Signal	Медвежий момент → SELL	-20
-              Hist растет	Усиление бычьего момента → BUY	+10
-              Hist падает	Усиление медвежьего момента → SELL	-10
-              <br>
-              3. EMA Ribbon (8, 13, 21, 50) — Вес 20%
-              Ситуация	Сигнал	Баллы
-              Цена > EMA8 > EMA13 > EMA21 > EMA50	Сильный бычий тренд → BUY	+20
-              Цена < EMA8 < EMA13 < EMA21 < EMA50	Сильный медвежий тренд → SELL	-20
-              <br>
-              4. CVD (Кумулятивный объемный дельта) — Вес 15%
-              Ситуация	Сигнал	Баллы
-              CVD растет и > 0	Покупатели доминируют → BUY	+15
-              CVD падает и < 0	Продавцы доминируют → SELL	-15
-              <br>
-              5. Bollinger Bands (20, 2) — Вес 15%
-              Ситуация	Сигнал	Баллы
-              Цена < Нижняя полоса	Экстремальная перепроданность → BUY	+15
-              Цена > Верхняя полоса	Экстремальная перекупленность → SELL	-15
-              Сужение полос + цена выше среднего	Ожидание пробоя вверх → BUY	+10
-              Сужение полос + цена ниже среднего	Ожидание пробоя вниз → SELL	-10
-              <br>
-              6. Volume Spike (Аномальный объем) — Вес 10%
-              Ситуация	Сигнал	Баллы
-              Объем > 1.5x среднего И цена > EMA8	Подтверждение бычьего движения → BUY	+10
-              Объем > 1.5x среднего И цена < EMA8	Подтверждение медвежьего движения → SELL	-10
-              <br>
-              7. POC (Point of Control) — Вес 5%
-              Ситуация	Сигнал	Баллы
-              Цена у POC И цена > EMA8	Уровень поддержки → BUY	+5
-              Цена у POC И цена < EMA8	Уровень сопротивления → SELL	-5
-          </span>
-          <br>
-          <span>
-              <strong>МЕРЦАНИЕ</strong>
-              <br>
-              Мерцающая обводка (визуализация):
-              <br>
-              Уровень	Цвет	Скорость мерцания	Действие
-              <br>
-              60-64%	🟢/🔴 Слабая	2 секунды	Обратить внимание
-              <br>
-              65-69%	🟢/🔴 Средняя	1.5 секунды	Рассмотреть вход
-              <br>
-              70-74%	🟢/🔴 Сильная	1.2 секунды	Хороший сигнал
-              <br>
-              75-79%	🟢/🔴 Очень сильная	0.9 секунды	Отличный сигнал
-              <br>
-              80%+	🟢/🔴 Экстремальная	0.6 секунды	🔥 СРОЧНЫЙ ВХОД!
-          </span></span>
+            <span>🧠 РАСШИФРОВКА 7 ИНДИКАТОРОВ<br>
+              1. RSI — Вес 15%<br>
+              2. MACD — Вес 20%<br>
+              3. EMA Ribbon — Вес 20%<br>
+              4. CVD — Вес 15%<br>
+              5. Bollinger Bands — Вес 15%<br>
+              6. Volume Spike — Вес 10%<br>
+              7. POC — Вес 5%<br>
+            </span>
+            <br>
+            <span>
+                <strong>МЕРЦАНИЕ</strong><br>
+                60-64% Слабая • 65-69% Средняя • 70-74% Сильная • 75-79% Очень сильная • 80%+ Экстремальная
+            </span>
         `;
   }
 
@@ -2162,7 +2132,7 @@ class App {
     this._loadingAssets = new Set();
     this._loadedTF = null;
 
-    // Fear & Greed
+    // Fear & Greed создаём здесь, но start() вызовем ПОСЛЕ render
     this.fng = new FearGreedManager(CONFIG.fearGreed);
   }
 
@@ -2170,10 +2140,9 @@ class App {
     this.ui.render();
     this._bindUIEvents();
 
-    // Запуск Fear & Greed (после render, чтобы элементы уже были в DOM)
+    // Запуск F&G — ТОЛЬКО после ui.render(), когда элементы уже в DOM
     this.fng.start();
 
-    // Подключаем WebSocket
     this.wsManager = new WSManager((data) => this._handleKline(data));
     this.wsManager.onStatus = (connected) =>
       this.ui.setConnectionStatus(connected);
