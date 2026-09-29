@@ -97,6 +97,12 @@ body {
   gap: 12px;
   flex-wrap: wrap;
 }
+.ws-status-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
 
 .ws-status {
   font-size: 11px;
@@ -189,7 +195,7 @@ body {
 }
 
 .fng-value {
-  min-width: 90px;
+  min-width: 50px;
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-weight: 700;

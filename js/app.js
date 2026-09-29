@@ -1513,7 +1513,7 @@ class UIRenderer {
                 <div class="widget-header">
                     <div>
                         <span class="widget-title">⚛ CRYPTO SIGNAL TOOL ⚛</span>
-                        <span class="widget-version">v9.3 • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin) •</span>
+                        <span class="widget-version">v9.4 • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin) •</span>
                     </div>
                     <div class="widget-status-group">
                         <div class="sound-controls">
@@ -1523,10 +1523,12 @@ class UIRenderer {
                             <span class="sound-status" id="sound-status">
                                 <span class="sound-indicator on"></span>
                             </span>
+                            <span class="sound-label">Звук при ≥75%</span>
                         </div>
-                        <span class="ws-status" id="ws-status">⚡ Подключение...</span>
-                        <span class="sound-label">Звук при ≥75%</span>
-                        <span class="last-update" id="last-update">--:--:--</span>
+                        <div class="ws-status-group">
+                          <span class="ws-status" id="ws-status">⚡ Подключение...</span>
+                          <span class="last-update" id="last-update">--:--:--</span>
+                        </div>
                     </div>
                 </div>
 
