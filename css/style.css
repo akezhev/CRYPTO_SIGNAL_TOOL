@@ -148,8 +148,8 @@ body {
 
 .fng-track {
   position: relative;
-  width: auto;
-  height: 12px;
+  width: 120px;
+  height: 14px;
   border-radius: 4px;
   background: linear-gradient(
     90deg,
