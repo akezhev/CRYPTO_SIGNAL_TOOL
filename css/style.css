@@ -341,7 +341,7 @@ body {
    СЧЕТЧИК СИГНАЛОВ
 ============================================================ */
 .signal-count-item {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 500;
 
   color: #94a3b8;
@@ -349,7 +349,7 @@ body {
   border: 1px solid rgba(2, 42, 175, 0.08);
   border-radius: 20px;
 
-  padding: 4px 12px;
+  padding: 3px 11px;
   width: auto;
 
   display: flex;
@@ -371,7 +371,7 @@ body {
 .signal-card {
   background: rgba(255, 255, 255, 0.03);
   border-radius: 16px;
-  padding: 15px;
+  padding: 13px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   transition: all 0.3s ease;
   cursor: default;
