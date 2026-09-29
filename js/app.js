@@ -1,6 +1,6 @@
 // ============================================================
-//  МОДУЛЬ CRYPTO SIGNAL WIDGET (v9.1)
-//  Полная реструктуризация с оптимизациями и исправлениями
+//  МОДУЛЬ CRYPTO SIGNAL TOOL (v9.2)
+//  + Fear & Greed Index widget в строке таймфреймов
 // ============================================================
 
 // ---------- Конфигурация ----------
@@ -29,7 +29,6 @@ const CONFIG = {
     rsiOverbought: 70,
     rsiOversold: 30,
     requireHtfConfirm: true,
-    // R/R > 1: стоп уже тейка (1–1.5× ATR vs 2–3× ATR)
     stopAtrMult: 1.25,
     takeProfitAtrMult: 2.5,
     minProfitPercent: 2.0,
@@ -49,6 +48,10 @@ const CONFIG = {
     bbPeriod: 20,
     bbStdDev: 2,
     atrPeriod: 14,
+  },
+  fearGreed: {
+    intervalMs: 5 * 60 * 1000, // 5 минут
+    neutralFallback: 50,
   },
 };
 
@@ -86,7 +89,6 @@ class SoundManager {
     this._lastPlayed = new Map();
     this._intervals = new Map();
 
-    // Fallback – генерация через Web Audio
     this._useFallback = false;
     this._audioCtx = null;
 
@@ -161,7 +163,6 @@ class SoundManager {
         this._audio.play().catch(() => {});
       }
       console.log(`🔊 ${signalType} ${asset} (${confidence}%)`);
-      // очистка старых записей
       for (const [k, t] of this._lastPlayed) {
         if (now - t > 300000) this._lastPlayed.delete(k);
       }
@@ -225,7 +226,7 @@ class SoundManager {
   }
 }
 
-// ---------- Загрузчик данных (исправлен: преобразование символов, повторные попытки) ----------
+// ---------- Загрузчик данных ----------
 class DataLoader {
   constructor() {
     this.exchanges = [
@@ -241,13 +242,12 @@ class DataLoader {
     this.maxRetries = 3;
   }
 
-  // Преобразование символа в формат, ожидаемый биржей
   _formatSymbol(exchangeId, symbol) {
     switch (exchangeId) {
       case "binance":
       case "bybit":
       case "mexc":
-        return symbol; // BTCUSDT
+        return symbol;
       case "kucoin":
         return symbol.replace("USDT", "-USDT").replace("BUSD", "-BUSD");
       case "okx":
@@ -310,7 +310,6 @@ class DataLoader {
       },
     };
 
-    // Сначала пробуем Binance, затем остальные (только объекты бирж)
     const orderedExchanges = [
       this.exchanges.find((e) => e.id === "binance"),
       ...this.exchanges.filter((e) => e.id !== "binance"),
@@ -527,16 +526,15 @@ class DataLoader {
   }
 }
 
-// ---------- Расчёт индикаторов (чистые функции, с кэшированием) ----------
+// ---------- Расчёт индикаторов ----------
 class IndicatorCalculator {
   constructor() {
-    this.cache = new Map(); // key: `${asset}_${tf}`, value: { rsi, macd, ema, cvd, bb, poc, atr, ... }
+    this.cache = new Map();
   }
 
   getCached(asset, tf) {
     return this.cache.get(`${asset}_${tf}`);
   }
-
   setCached(asset, tf, data) {
     this.cache.set(`${asset}_${tf}`, data);
   }
@@ -545,15 +543,10 @@ class IndicatorCalculator {
     if (!candles || candles.length < CONFIG.minCandlesRequired) return null;
     const closes = candles.map((c) => c.close);
     const volumes = candles.map((c) => c.volume);
-    const highs = candles.map((c) => c.high);
-    const lows = candles.map((c) => c.low);
-    const len = closes.length;
 
-    // RSI
     const rsi = this._rsi(closes, CONFIG.indicators.rsiPeriod);
     const currentRSI = rsi.length ? rsi[rsi.length - 1] : 50;
 
-    // MACD
     const macd = this._macd(
       closes,
       CONFIG.indicators.macdFast,
@@ -568,7 +561,6 @@ class IndicatorCalculator {
       : 0;
     const prevHist = hist.length > 1 ? hist[hist.length - 2] : currentHist;
 
-    // EMA Ribbon
     const ema8 = this._ema(closes, 8);
     const ema13 = this._ema(closes, 13);
     const ema21 = this._ema(closes, 21);
@@ -584,19 +576,15 @@ class IndicatorCalculator {
       ? ema50[ema50.length - 1]
       : closes[closes.length - 1];
 
-    // ATR
     const atrArr = this._atr(candles, CONFIG.indicators.atrPeriod);
     const atr = atrArr.length ? atrArr[atrArr.length - 1] : 0.01;
 
-    // POC
     const poc = this._poc(candles);
 
-    // CVD
     const cvdArr = this._cvd(candles);
     const cvd = cvdArr.length ? cvdArr[cvdArr.length - 1] : 0;
     const cvdPrev = cvdArr.length > 1 ? cvdArr[cvdArr.length - 2] : cvd;
 
-    // Bollinger
     const bb = this._bb(
       closes,
       CONFIG.indicators.bbPeriod,
@@ -613,7 +601,6 @@ class IndicatorCalculator {
       : closes[closes.length - 1];
     const bbWidth = (bbUpper - bbLower) / (bbMiddle || 1);
 
-    // Volume
     const vol = volumes[volumes.length - 1] || 0;
     const volAvg = volumes.slice(-20).reduce((a, b) => a + b, 0) / 20 || 1;
 
@@ -642,7 +629,6 @@ class IndicatorCalculator {
       volAvg,
       close,
       trendStrength,
-      // Сохраняем все массивы для бэктеста (но не кэшируем)
       _rsi: rsi,
       _macd: macd,
       _ema8: ema8,
@@ -657,7 +643,6 @@ class IndicatorCalculator {
     };
   }
 
-  // ---------- Приватные методы (чистые расчёты) ----------
   _rsi(data, period) {
     if (data.length < period + 1) return [50];
     const changes = [];
@@ -790,7 +775,7 @@ class IndicatorCalculator {
   }
 }
 
-// ---------- Генератор сигналов (использует индикаторы) ----------
+// ---------- Генератор сигналов ----------
 class SignalGenerator {
   constructor(indicatorCalc) {
     this.indicatorCalc = indicatorCalc;
@@ -803,12 +788,10 @@ class SignalGenerator {
     const ind = this.indicatorCalc.calculateAll(candles, tf);
     if (!ind) return this._emptySignal(asset, tf);
 
-    // Скоринг
     let buyScore = 0,
       sellScore = 0;
     const scores = {};
 
-    // 1. RSI (extremes first: <10 / >90 never matched after <30 / >70)
     const rsi = ind.rsi;
     if (rsi < 10) {
       buyScore += 30;
@@ -836,7 +819,6 @@ class SignalGenerator {
       scores.rsi = -5;
     } else scores.rsi = 0;
 
-    // 2. MACD
     const hist = ind.macdHist;
     if (hist > 0 && ind.macdLine > ind.macdSignal) {
       buyScore += 20;
@@ -852,7 +834,6 @@ class SignalGenerator {
       scores.macd = -10;
     } else scores.macd = 0;
 
-    // 3. EMA Ribbon
     const c = ind.close;
     if (
       c > ind.ema8 &&
@@ -872,7 +853,6 @@ class SignalGenerator {
       scores.ema = -20;
     } else scores.ema = 0;
 
-    // 4. CVD
     if (ind.cvd > ind.cvdPrev && ind.cvd > 0) {
       buyScore += 15;
       scores.cvd = 15;
@@ -881,7 +861,6 @@ class SignalGenerator {
       scores.cvd = -15;
     } else scores.cvd = 0;
 
-    // 5. Bollinger
     if (c < ind.bbLower) {
       buyScore += 15;
       scores.bb = 15;
@@ -896,7 +875,6 @@ class SignalGenerator {
       scores.bb = -10;
     } else scores.bb = 0;
 
-    // 6. Volume
     const volRatio = ind.volume / ind.volAvg;
     if (volRatio > 1.5 && c > ind.ema8) {
       buyScore += 10;
@@ -906,7 +884,6 @@ class SignalGenerator {
       scores.volume = -10;
     } else scores.volume = 0;
 
-    // 7. POC
     const pocDist = Math.abs(c - ind.poc) / ind.atr;
     if (pocDist < 0.2 && c > ind.ema8) {
       buyScore += 5;
@@ -1048,7 +1025,7 @@ class SignalGenerator {
         buyProb *= 0.7;
       }
     }
-    let waitProb = Math.max(100 - (buyProb + sellProb), 0);
+    const waitProb = Math.max(100 - (buyProb + sellProb), 0);
     return {
       wait: Math.round(utils.clamp(waitProb, 0, 100)),
       buy: Math.round(utils.clamp(buyProb, 0, 100)),
@@ -1093,7 +1070,7 @@ class SignalGenerator {
   }
 }
 
-// ---------- Бэктестер (использует тот же генератор сигналов) ----------
+// ---------- Бэктестер ----------
 class Backtester {
   constructor(signalGenerator) {
     this.signalGen = signalGenerator;
@@ -1180,7 +1157,6 @@ class Backtester {
       }
     }
 
-    // Закрыть оставшиеся позиции
     if (position) {
       const last = agg[agg.length - 1];
       trades.push(
@@ -1197,13 +1173,7 @@ class Backtester {
     const list = trades || [];
     const total = list.length;
     if (total === 0) {
-      return {
-        totalTrades: 0,
-        wins: 0,
-        losses: 0,
-        totalProfit: 0,
-        winRate: 0,
-      };
+      return { totalTrades: 0, wins: 0, losses: 0, totalProfit: 0, winRate: 0 };
     }
     const wins = list.filter((t) => t.profit > 0).length;
     const losses = list.filter((t) => t.profit < 0).length;
@@ -1316,9 +1286,7 @@ class WSManager {
         try {
           const parsed = JSON.parse(ev.data);
           const payload = parsed.data || parsed;
-          if (payload && payload.k) {
-            this.onKline(payload);
-          }
+          if (payload && payload.k) this.onKline(payload);
         } catch (e) {}
       };
       this.ws.onclose = () => {
@@ -1356,12 +1324,83 @@ class WSManager {
   }
 }
 
-// ---------- Рендерер UI (оптимизированное обновление) ----------
+// ============================================================
+//  Fear & Greed Index Manager (оптимизированный)
+// ============================================================
+class FearGreedManager {
+  constructor({ intervalMs = 5 * 60 * 1000, neutralFallback = 50 } = {}) {
+    this.intervalMs = intervalMs;
+    this.neutralFallback = neutralFallback;
+
+    this._el = {
+      marker: document.getElementById("fngMarker"),
+      value: document.getElementById("fngValue"),
+    };
+
+    this._lastValue = -1;
+    this._rafId = null;
+    this._timerId = null;
+    this._abort = null;
+  }
+
+  start() {
+    if (!this._el.marker || !this._el.value) return;
+    this._fetch();
+    this._timerId = setInterval(() => this._fetch(), this.intervalMs);
+  }
+
+  stop() {
+    if (this._timerId) clearInterval(this._timerId);
+    if (this._rafId) cancelAnimationFrame(this._rafId);
+    if (this._abort) this._abort.abort();
+  }
+
+  async _fetch() {
+    if (this._abort) this._abort.abort();
+    this._abort = new AbortController();
+    try {
+      const resp = await fetch("https://api.alternative.me/fng/?limit=1", {
+        signal: this._abort.signal,
+        cache: "no-store",
+      });
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      const json = await resp.json();
+      const v = parseInt(json?.data?.[0]?.value ?? this.neutralFallback, 10);
+      this._set(Number.isFinite(v) ? v : this.neutralFallback);
+    } catch (e) {
+      // при ошибке — оставляем прошлое значение
+    }
+  }
+
+  _set(v) {
+    const clamped = Math.max(0, Math.min(100, v));
+    if (clamped === this._lastValue) return;
+    this._lastValue = clamped;
+
+    if (this._rafId) cancelAnimationFrame(this._rafId);
+    this._rafId = requestAnimationFrame(() => {
+      const { marker, value } = this._el;
+      if (marker) marker.style.left = clamped + "%";
+      if (value) {
+        value.textContent = clamped;
+        let color = "#fbbf24";
+        if (clamped < 25) color = "#ef4444";
+        else if (clamped < 45) color = "#f97316";
+        else if (clamped < 55) color = "#fbbf24";
+        else if (clamped < 75) color = "#84cc16";
+        else color = "#22c55e";
+        value.style.color = color;
+      }
+    });
+  }
+}
+
+// ---------- Рендерер UI ----------
 class UIRenderer {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
     if (!this.container) throw new Error("Контейнер не найден");
-    this.cards = {}; // ссылки на элементы карточек
+    this.cards = {};
     this.soundManager = null;
     this.currentTF = CONFIG.defaultTF;
     this.signals = new Map();
@@ -1449,7 +1488,7 @@ class UIRenderer {
                 <div class="widget-header">
                     <div>
                         <span class="widget-title">⚛ CRYPTO SIGNAL TOOL ⚛</span>
-                        <span class="widget-version">v9.1 • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin)
+                        <span class="widget-version">v9.2 • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin)
  • Звук при ≥75%</span>
                     </div>
                     <div class="widget-status-group">
@@ -1476,6 +1515,15 @@ class UIRenderer {
                       )
                       .join("")}
                     <div class="signal-count-item">⚡ <span id="signal-count">0</span> сигналов</div>
+
+                    <!-- === Fear & Greed === -->
+                    <div class="fng-widget" id="fngWidget" title="Crypto Fear & Greed Index">
+                        <span class="fng-label">F&G</span>
+                        <div class="fng-track">
+                            <div class="fng-marker" id="fngMarker"></div>
+                        </div>
+                        <span class="fng-value" id="fngValue">--</span>
+                    </div>
                 </div>
               
                 <div class="signal-grid" id="signal-grid">
@@ -1506,10 +1554,8 @@ class UIRenderer {
                     <div class="footer-stat">⚡<span id="asset-count">${
                       CONFIG.assets.length
                     } активов</span></div>
-
                 </div>
 
-                <!-- Свёрнутая документация -->
                 <div class="docs-wrapper">
                     <details>
                         <summary>ДОКУМЕНТАЦИЯ</summary>
@@ -1752,7 +1798,6 @@ class UIRenderer {
       statWinrate: document.getElementById("stat-winrate"),
       statPl: document.getElementById("stat-pl"),
     };
-    // Сохраняем карточки
     this.cards = {};
     document.querySelectorAll(".signal-card").forEach((card) => {
       const asset = card.dataset.asset;
@@ -1761,7 +1806,6 @@ class UIRenderer {
   }
 
   _bindEvents() {
-    // Звук
     if (this.el.soundToggle) {
       this.el.soundToggle.addEventListener("click", () => {
         if (this.soundManager) {
@@ -1772,13 +1816,14 @@ class UIRenderer {
           this.el.soundToggle.innerHTML = `${
             enabled ? "🔊" : "🔇"
           }<span class="sound-label">${enabled ? "Вкл" : "Выкл"}</span>`;
-          this.el.soundStatusFooter.textContent = `Звук: ${
-            enabled ? "Вкл" : "Выкл"
-          }`;
+          if (this.el.soundStatusFooter) {
+            this.el.soundStatusFooter.textContent = `Звук: ${
+              enabled ? "Вкл" : "Выкл"
+            }`;
+          }
         }
       });
     }
-    // Таймфреймы
     if (this.el.tfGroup) {
       this.el.tfGroup.addEventListener("click", (e) => {
         const btn = e.target.closest(".tf-btn");
@@ -1793,18 +1838,15 @@ class UIRenderer {
     }
   }
 
-  // Обновление сигнала для одного актива
   updateSignal(asset, signal) {
     this.signals.set(asset, signal);
     const card = this.cards[asset];
     if (!card) return;
 
-    // Обновляем цену
     const priceEl = card.querySelector(".asset-price");
     if (priceEl && signal.price)
       priceEl.textContent = `$${signal.price.toFixed(2)}`;
 
-    // Направление и уверенность (на карточке — общий сигнал по баллам)
     const dirEl = card.querySelector(".signal-direction");
     const confEl = card.querySelector(".signal-confidence");
     const displayDir = signal.scoreDirection || signal.direction;
@@ -1838,22 +1880,15 @@ class UIRenderer {
           : "#475569";
     }
 
-    // Индикаторы (7 штук)
     this._updateIndicators(card, signal.indicatorScores);
-
-    // Action probabilities
     this._updateActions(card, signal.actionProbabilities);
-
-    // Бейдж и мерцание — по общему сигналу (баллы), не по фильтру входа
     this._updateBadgeAndGlow(card, displayDir, signal.confidence);
 
-    // Футер
     const tfEl = card.querySelector(".tf-signal");
     if (tfEl && signal.indicators) {
       tfEl.textContent = `RSI:${signal.indicators.rsi} | MACD:${signal.indicators.macd}`;
     }
 
-    // Звук
     if (
       this.soundManager &&
       signal.confidence >= CONFIG.sound.threshold &&
@@ -1926,7 +1961,6 @@ class UIRenderer {
 
   _updateBadgeAndGlow(card, direction, confidence) {
     const badge = card.querySelector(".signal-strength-badge");
-    // Сброс классов
     card.className = card.className
       .split(" ")
       .filter(
@@ -2092,15 +2126,12 @@ class UIRenderer {
   setLastUpdate(time) {
     if (this.el.lastUpdate) this.el.lastUpdate.textContent = time;
   }
-
   setSignalCount(count) {
     if (this.el.signalCount) this.el.signalCount.textContent = count;
   }
-
   setCacheStatus(text) {
     if (this.el.cacheStatus) this.el.cacheStatus.textContent = text;
   }
-
   setHistoryStatus(text) {
     if (this.el.historyStatus) this.el.historyStatus.textContent = text;
   }
@@ -2120,7 +2151,7 @@ class App {
     this.ui.setSoundManager(this.sound);
     this.ui.onTFChange = (tf) => this.onTFChange(tf);
 
-    this.marketData = new Map(); // asset -> candles
+    this.marketData = new Map();
     this.signals = new Map();
     this.currentTF = CONFIG.defaultTF;
     this.wsManager = null;
@@ -2129,11 +2160,17 @@ class App {
     this._signalThrottle = null;
     this._loadingAssets = new Set();
     this._loadedTF = null;
+
+    // Fear & Greed
+    this.fng = new FearGreedManager(CONFIG.fearGreed);
   }
 
   async init() {
     this.ui.render();
     this._bindUIEvents();
+
+    // Запуск Fear & Greed (после render, чтобы элементы уже были в DOM)
+    this.fng.start();
 
     // Подключаем WebSocket
     this.wsManager = new WSManager((data) => this._handleKline(data));
@@ -2141,16 +2178,11 @@ class App {
       this.ui.setConnectionStatus(connected);
     this.wsManager.connect();
 
-    // Загружаем историю
     await this._loadHistoricalData();
-
-    // Генерируем первые сигналы
     this._generateSignals();
 
-    // Периодическое обновление сигналов (каждые 2 минуты)
     this._updateInterval = setInterval(() => this._generateSignals(), 120000);
 
-    // Обновление статуса
     setInterval(() => {
       this.ui.setLastUpdate(new Date().toLocaleTimeString());
     }, 30000);
@@ -2187,7 +2219,6 @@ class App {
       this.ui.setHistoryStatus("⚠️ Нет данных");
       return;
     }
-
     setTimeout(() => this._runBacktest(), 500);
   }
 
@@ -2270,9 +2301,7 @@ class App {
     for (const asset of CONFIG.assets) {
       const candles = this.marketData.get(asset);
       if (!candles || candles.length < CONFIG.minCandlesRequired) {
-        if (!this._loadingAssets.has(asset)) {
-          this._loadAssetData(asset);
-        }
+        if (!this._loadingAssets.has(asset)) this._loadAssetData(asset);
         continue;
       }
       const agg = this._aggregateCandles(candles, tf);
@@ -2341,6 +2370,7 @@ class App {
     if (this.wsManager) this.wsManager.close();
     if (this._updateInterval) clearInterval(this._updateInterval);
     if (this._signalThrottle) clearTimeout(this._signalThrottle);
+    if (this.fng) this.fng.stop();
     this.sound.clearAll();
     console.log("🧹 Приложение уничтожено");
   }
