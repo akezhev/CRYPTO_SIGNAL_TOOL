@@ -144,7 +144,7 @@ body {
   opacity: 0.8;
   font-weight: 600;
   letter-spacing: 0.5px;
-  color: #ffffff;
+  color: #ff0000;
 }
 
 .fng-track {
@@ -154,11 +154,11 @@ body {
   border-radius: 4px;
   background: linear-gradient(
     90deg,
-    #d32f2f 0%,
+    #ff0000 0%,
     #f57c00 25%,
     #fbc02d 50%,
     #7cb342 75%,
-    #2e7d32 100%
+    #00ff0d 100%
   );
   overflow: hidden;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
@@ -191,7 +191,7 @@ body {
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  color: #fbbf24;
+  color: #00ff0d;
 }
 
 @media (max-width: 640px) {
