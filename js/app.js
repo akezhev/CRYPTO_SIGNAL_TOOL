@@ -1501,8 +1501,8 @@ class UIRenderer {
                             </span>
                         </div>
                         <span class="ws-status" id="ws-status">⚡ Подключение...</span>
-                        <span class="last-update" id="last-update">--:--:--</span>
                         <span class="sound-label">Звук при ≥75%</span>
+                        <span class="last-update" id="last-update">--:--:--</span>
                     </div>
                 </div>
 
