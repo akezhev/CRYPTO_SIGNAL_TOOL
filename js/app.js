@@ -1519,11 +1519,11 @@ class UIRenderer {
 
                     <!-- === Fear & Greed === -->
                     <div class="fng-widget" id="fngWidget" title="Crypto Fear & Greed Index">
-                        <span class="fng-label">СТРАХ</span>
+                        <span class="fng-label">СТРАХ & ЖАДНОСТЬ</span>
                         <div class="fng-track">
                             <div class="fng-marker" id="fngMarker"></div>
                         </div>
-                        <span class="fng-value" id="fngValue">ЖАДНОСТЬ</span>
+                        <span class="fng-value" id="fngValue"> -- </span>
                     </div>
                 </div>
               

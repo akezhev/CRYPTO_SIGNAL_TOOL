@@ -120,7 +120,6 @@ body {
 ============================================================ */
 /* ===== Fear & Greed widget (встроен в .tf-group) ===== */
 .tf-group {
-  /* на случай, если у вас ещё нет flex — добавляем безопасно */
   display: flex;
   align-items: center;
   gap: 8px;
@@ -144,7 +143,7 @@ body {
   opacity: 0.8;
   font-weight: 600;
   letter-spacing: 0.5px;
-  color: #ff0000;
+  color: #ffffff;
 }
 
 .fng-track {
@@ -191,7 +190,7 @@ body {
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  color: #00ff0d;
+  color: #fbbf24;
 }
 
 @media (max-width: 640px) {
