@@ -1489,7 +1489,7 @@ class UIRenderer {
                     <div>
                         <span class="widget-title">⚛ CRYPTO SIGNAL TOOL ⚛</span>
                         <span class="widget-version">v9.2 • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin)
- • Звук при ≥75%</span>
+ •</span>
                     </div>
                     <div class="widget-status-group">
                         <div class="sound-controls">
@@ -1502,6 +1502,7 @@ class UIRenderer {
                         </div>
                         <span class="ws-status" id="ws-status">⚡ Подключение...</span>
                         <span class="last-update" id="last-update">--:--:--</span>
+                        <span class="sound-label">Звук при ≥75%</span>
                     </div>
                 </div>
 
