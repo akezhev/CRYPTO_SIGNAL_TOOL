@@ -420,8 +420,8 @@ body {
 }
 
 .ms-compact-arrow {
-  font-size: 8px;
-  color: #64748b;
+  font-size: 10px;
+  color: rgb(66, 179, 250);
   transition: transform 0.25s ease;
   margin-left: 2px;
 }
