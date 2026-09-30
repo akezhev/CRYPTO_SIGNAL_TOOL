@@ -1,6 +1,7 @@
 // ============================================================
 //  МОДУЛЬ CRYPTO SIGNAL TOOL (v9.3)
 //  + Fear & Greed Index (рабочая версия с fallback)
+//  + Market State Widget (Macro Heatmap) — рядом с F&G
 // ============================================================
 
 // ---------- Конфигурация ----------
@@ -1306,9 +1307,6 @@ class WSManager {
 
 // ============================================================
 //  Fear & Greed Index Manager (ИСПРАВЛЕННЫЙ)
-//  - элементы ищутся в start(), а не в конструкторе
-//  - fallback через corsproxy.io
-//  - стартовое значение показывается сразу
 // ============================================================
 class FearGreedManager {
   constructor({ intervalMs = 5 * 60 * 1000, neutralFallback = 50 } = {}) {
@@ -1417,6 +1415,427 @@ class FearGreedManager {
     if (v < 55) return "Neutral";
     if (v < 75) return "Greed";
     return "Extreme Greed";
+  }
+}
+
+// ============================================================
+//  MARKET STATE WIDGET (Macro Heatmap) v1.0            ← ДОБАВЛЕНО
+//  Отображается рядом с Fear & Greed в одной строке
+// ============================================================
+class MarketStateWidget {
+  static CONFIG = {
+    containerId: "market-state-widget",
+    refreshMs: 5 * 60 * 1000,
+    cacheTTL: 4 * 60 * 1000,
+    cacheKey: "ms_widget_cache_v1",
+    timeout: 8000,
+    weights: {
+      macro: { liquidity: 0.4, leverage: 0.3, breadth: 0.3 },
+      liquidity: { volume: 0.4, mcap: 0.3, volatility: 0.3 },
+      leverage: { funding: 0.4, oi: 0.35, lsRatio: 0.25 },
+      breadth: { dominance: 0.4, altseason: 0.35, gainers: 0.25 },
+    },
+  };
+
+  constructor(opts = {}) {
+    this.cfg = { ...MarketStateWidget.CONFIG, ...opts };
+    this._timer = null;
+    this._loading = false;
+    this._lastData = null;
+    this._container = null;
+  }
+
+  start() {
+    this._container = document.getElementById(this.cfg.containerId);
+    if (!this._container) {
+      console.warn(`⚠️ MarketStateWidget: #${this.cfg.containerId} не найден`);
+      return;
+    }
+    this._renderSkeleton();
+    const cached = this._getCache();
+    if (cached) {
+      this._lastData = cached;
+      this._render(cached);
+    }
+    this._refresh();
+    this._timer = setInterval(() => this._refresh(), this.cfg.refreshMs);
+  }
+
+  stop() {
+    if (this._timer) clearInterval(this._timer);
+    this._timer = null;
+  }
+
+  async refreshNow() {
+    return this._refresh(true);
+  }
+
+  // ---------- Утилиты ----------
+  _clamp(v, min, max) {
+    return Math.max(min, Math.min(max, v));
+  }
+  _map(v, inMin, inMax, outMin = 0, outMax = 100) {
+    if (inMax === inMin) return outMin;
+    const t = (v - inMin) / (inMax - inMin);
+    return outMin + this._clamp(t, 0, 1) * (outMax - outMin);
+  }
+  _log10(v) {
+    return Math.log(Math.max(v, 1)) / Math.log(10);
+  }
+  _fmtNum(n) {
+    const v = Number(n);
+    if (!Number.isFinite(v)) return "--";
+    if (Math.abs(v) >= 1e12) return (v / 1e12).toFixed(1) + "T";
+    if (Math.abs(v) >= 1e9) return (v / 1e9).toFixed(1) + "B";
+    if (Math.abs(v) >= 1e6) return (v / 1e6).toFixed(1) + "M";
+    if (Math.abs(v) >= 1e3) return (v / 1e3).toFixed(1) + "K";
+    return v.toFixed(2);
+  }
+  _fmtTime(ts) {
+    return new Date(ts).toLocaleTimeString("ru-RU", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  }
+
+  async _fetchJSON(url) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), this.cfg.timeout);
+    try {
+      const r = await fetch(url, {
+        signal: ctrl.signal,
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return await r.json();
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
+  // ---------- Загрузка данных ----------
+  async _fetchAll() {
+    const tasks = await Promise.allSettled([
+      this._fetchJSON("https://api.coingecko.com/api/v3/global"),
+      this._fetchJSON(
+        "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&price_change_percentage=24h"
+      ),
+      this._fetchJSON(
+        "https://fapi.binance.com/fapi/v1/premiumIndex?symbol=BTCUSDT"
+      ),
+      this._fetchJSON(
+        "https://fapi.binance.com/futures/data/openInterestHist?symbol=BTCUSDT&period=1h&limit=24"
+      ),
+      this._fetchJSON(
+        "https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1"
+      ),
+    ]);
+
+    const g = tasks[0].status === "fulfilled" ? tasks[0].value : {};
+    const c = tasks[1].status === "fulfilled" ? tasks[1].value : [];
+    const p = tasks[2].status === "fulfilled" ? tasks[2].value : {};
+    const oh = tasks[3].status === "fulfilled" ? tasks[3].value : [];
+    const ls = tasks[4].status === "fulfilled" ? tasks[4].value : [];
+
+    const btc = Array.isArray(c) ? c.find((x) => x.symbol === "btc") : null;
+    const d = g?.data || {};
+
+    return {
+      totalMcap: d.total_market_cap?.usd || 0,
+      totalVolume: d.total_volume?.usd || 0,
+      btcDominance: d.market_cap_percentage?.btc || 0,
+      mcapChange24h: d.market_cap_change_percentage_24h_usd || 0,
+      btcChange24h: btc?.price_change_percentage_24h || 0,
+      fundingRate: parseFloat(p?.lastFundingRate) || 0,
+      lsRatio: parseFloat(ls?.[0]?.longShortRatio) || 1.0,
+      oiHist: Array.isArray(oh) ? oh : [],
+      topCoins: Array.isArray(c) ? c : [],
+    };
+  }
+
+  // ---------- Нормализация в баллы 0-100 ----------
+  _normVolume(v) {
+    return this._map(this._log10(v / 1e9), this._log10(30), this._log10(300));
+  }
+  _normMcap(v) {
+    return this._map(this._log10(v / 1e12), this._log10(0.8), this._log10(4));
+  }
+  _normVolatility(ch) {
+    return this._clamp(100 - Math.abs(ch) * 8, 0, 100);
+  }
+  _normFunding(rate) {
+    const r = rate * 100;
+    const absR = Math.abs(r);
+    const sign = r >= 0 ? 1 : -1;
+    const extremity = this._clamp((absR / 0.1) * 50, 0, 50);
+    return this._clamp(50 + sign * (50 - extremity), 0, 100);
+  }
+  _normOI(hist) {
+    if (!hist || hist.length < 2) return 50;
+    const first = parseFloat(hist[0].sumOpenInterest) || 1;
+    const last = parseFloat(hist[hist.length - 1].sumOpenInterest) || first;
+    const ch = ((last - first) / first) * 100;
+    if (ch >= 20) return 30;
+    if (ch >= 10) return 60;
+    if (ch >= 0) return 70;
+    if (ch >= -10) return 55;
+    return 40;
+  }
+  _normLS(r) {
+    if (r >= 2.5) return 25;
+    if (r >= 1.8) return 50;
+    if (r >= 1.2) return 70;
+    if (r >= 0.8) return 80;
+    if (r >= 0.5) return 50;
+    return 25;
+  }
+  _normDominance(d) {
+    if (d >= 65) return 30;
+    if (d >= 55) return 50;
+    if (d >= 48) return 75;
+    if (d >= 40) return 85;
+    return 70;
+  }
+  _normAltseason(btcCh, coins) {
+    if (!coins || coins.length < 10) return 50;
+    const top50 = coins.slice(0, 50);
+    const beating = top50.filter(
+      (x) => (x.price_change_percentage_24h || 0) > btcCh
+    ).length;
+    return this._clamp((beating / top50.length) * 100, 0, 100);
+  }
+  _normGainers(coins) {
+    if (!coins || !coins.length) return 50;
+    const up = coins.filter(
+      (x) => (x.price_change_percentage_24h || 0) > 0
+    ).length;
+    return this._clamp((up / coins.length) * 100, 0, 100);
+  }
+
+  // ---------- Композитные индексы ----------
+  _computeScores(m) {
+    const w = this.cfg.weights;
+
+    const liquidity = Math.round(
+      this._normVolume(m.totalVolume) * w.liquidity.volume +
+        this._normMcap(m.totalMcap) * w.liquidity.mcap +
+        this._normVolatility(m.mcapChange24h) * w.liquidity.volatility
+    );
+    const leverage = Math.round(
+      this._normFunding(m.fundingRate) * w.leverage.funding +
+        this._normOI(m.oiHist) * w.leverage.oi +
+        this._normLS(m.lsRatio) * w.leverage.lsRatio
+    );
+    const breadth = Math.round(
+      this._normDominance(m.btcDominance) * w.breadth.dominance +
+        this._normAltseason(m.btcChange24h, m.topCoins) * w.breadth.altseason +
+        this._normGainers(m.topCoins) * w.breadth.gainers
+    );
+    const macro = Math.round(
+      liquidity * w.macro.liquidity +
+        leverage * w.macro.leverage +
+        breadth * w.macro.breadth
+    );
+    return { liquidity, leverage, breadth, macro };
+  }
+
+  // ---------- Кэш ----------
+  _getCache() {
+    try {
+      const raw = localStorage.getItem(this.cfg.cacheKey);
+      if (!raw) return null;
+      const obj = JSON.parse(raw);
+      if (Date.now() - obj.ts > this.cfg.cacheTTL) return null;
+      return obj.data;
+    } catch {
+      return null;
+    }
+  }
+  _setCache(data) {
+    try {
+      localStorage.setItem(
+        this.cfg.cacheKey,
+        JSON.stringify({ ts: Date.now(), data })
+      );
+    } catch {}
+  }
+
+  // ---------- Refresh ----------
+  async _refresh() {
+    if (this._loading) return;
+    this._loading = true;
+    this._setStatus("loading");
+    try {
+      const raw = await this._fetchAll();
+      const scores = this._computeScores(raw);
+      const data = { ...raw, scores, ts: Date.now() };
+      this._lastData = data;
+      this._setCache(data);
+      this._render(data);
+      this._setStatus("ok");
+    } catch (e) {
+      console.warn("MarketStateWidget: ошибка", e);
+      this._setStatus("error");
+      if (!this._lastData) this._renderFallback();
+    } finally {
+      this._loading = false;
+    }
+  }
+
+  // ---------- Цвета/подписи ----------
+  _scoreClass(v) {
+    if (v >= 75) return "ms-green";
+    if (v >= 55) return "ms-yellow";
+    if (v >= 40) return "ms-orange";
+    return "ms-red";
+  }
+  _scoreColor(v) {
+    if (v >= 75) return "#22c55e";
+    if (v >= 55) return "#eab308";
+    if (v >= 40) return "#f97316";
+    return "#ef4444";
+  }
+  _scoreLabel(v) {
+    if (v >= 80) return "Очень здоровый";
+    if (v >= 65) return "Здоровый";
+    if (v >= 50) return "Нейтральный";
+    if (v >= 35) return "Осторожно";
+    if (v >= 20) return "Риск";
+    return "Экстрим";
+  }
+
+  // ---------- Рендер ----------
+  _renderSkeleton() {
+    this._container.innerHTML = `
+      <div class="ms-widget">
+        <div class="ms-header">
+          <div class="ms-title">Состояние рынка</div>
+          <div class="ms-score-badge">
+            <span class="ms-score-value" style="color:#94a3b8;">--</span>
+            <span class="ms-score-label">Macro</span>
+          </div>
+        </div>
+        <div class="ms-heatmap">
+          ${["Ликвидность", "Плечо", "Широта"]
+            .map(
+              (label) => `
+            <div class="ms-row">
+              <span class="ms-row-label">${label}</span>
+              <div class="ms-bar-track"><div class="ms-bar-fill ms-blue"></div></div>
+              <span class="ms-bar-value">--</span>
+            </div>
+          `
+            )
+            .join("")}
+        </div>
+        <div class="ms-footer">
+          <div class="ms-update"><span class="ms-dot ms-loading"></span> Загрузка...</div>
+        </div>
+      </div>
+    `;
+  }
+
+  _render(data) {
+    const s = data.scores;
+    const rows = [
+      { label: "Ликвидность", val: s.liquidity },
+      { label: "Плечо", val: s.leverage },
+      { label: "Широта", val: s.breadth },
+    ];
+    const rowsHtml = rows
+      .map(
+        (r) => `
+      <div class="ms-row">
+        <span class="ms-row-label">${r.label}</span>
+        <div class="ms-bar-track">
+          <div class="ms-bar-fill ${this._scoreClass(r.val)}" style="width:${
+          r.val
+        }%"></div>
+        </div>
+        <span class="ms-bar-value" style="color:${this._scoreColor(r.val)};">${
+          r.val
+        }</span>
+      </div>
+    `
+      )
+      .join("");
+
+    const fundingPct = (data.fundingRate * 100).toFixed(4);
+    const fundingCls =
+      data.fundingRate > 0.0005 || data.fundingRate < -0.0005 ? "neg" : "pos";
+    const lsRatioStr = data.lsRatio.toFixed(2);
+    const lsCls = data.lsRatio > 2.2 || data.lsRatio < 0.6 ? "neg" : "pos";
+    const btcDom = data.btcDominance.toFixed(1);
+    const mcapChange = data.mcapChange24h.toFixed(2);
+    const mcapCls = data.mcapChange24h >= 0 ? "pos" : "neg";
+
+    this._container.innerHTML = `
+      <div class="ms-widget">
+        <div class="ms-header">
+          <div class="ms-title">Состояние рынка</div>
+          <div class="ms-score-badge">
+            <span class="ms-score-value" style="color:${this._scoreColor(
+              s.macro
+            )};">${s.macro}</span>
+            <span class="ms-score-label">${this._scoreLabel(s.macro)}</span>
+          </div>
+        </div>
+
+        <div class="ms-heatmap">${rowsHtml}</div>
+
+        <div class="ms-details">
+          <div class="ms-detail"><span>Funding</span><span class="ms-detail-val ${fundingCls}">${fundingPct}%</span></div>
+          <div class="ms-detail"><span>L/S</span><span class="ms-detail-val ${lsCls}">${lsRatioStr}</span></div>
+          <div class="ms-detail"><span>BTC Dom</span><span class="ms-detail-val">${btcDom}%</span></div>
+          <div class="ms-detail"><span>MCap 24h</span><span class="ms-detail-val ${mcapCls}">${mcapChange}%</span></div>
+          <div class="ms-detail"><span>Vol 24h</span><span class="ms-detail-val">$${this._fmtNum(
+            data.totalVolume
+          )}</span></div>
+          <div class="ms-detail"><span>MCap</span><span class="ms-detail-val">$${this._fmtNum(
+            data.totalMcap
+          )}</span></div>
+        </div>
+
+        <div class="ms-footer">
+          <div class="ms-update">
+            <span class="ms-dot" id="ms-status-dot"></span>
+            <span id="ms-update-time">${this._fmtTime(
+              data.ts || Date.now()
+            )}</span>
+          </div>
+          <button class="ms-refresh-btn" id="ms-refresh-btn">↻</button>
+        </div>
+      </div>
+    `;
+    const btn = this._container.querySelector("#ms-refresh-btn");
+    if (btn) btn.addEventListener("click", () => this.refreshNow());
+  }
+
+  _renderFallback() {
+    this._render({
+      scores: { liquidity: 50, leverage: 50, breadth: 50, macro: 50 },
+      fundingRate: 0,
+      lsRatio: 1,
+      btcDominance: 50,
+      mcapChange24h: 0,
+      totalVolume: 0,
+      totalMcap: 0,
+      ts: Date.now(),
+    });
+    this._setStatus("error");
+  }
+
+  _setStatus(status) {
+    const dot = this._container?.querySelector("#ms-status-dot");
+    const time = this._container?.querySelector("#ms-update-time");
+    if (dot) {
+      dot.className = "ms-dot";
+      if (status === "loading") dot.classList.add("ms-loading");
+      else if (status === "error") dot.classList.add("ms-error");
+    }
+    if (time && status === "ok") time.textContent = this._fmtTime(Date.now());
   }
 }
 
@@ -1550,6 +1969,11 @@ class UIRenderer {
                             <div class="fng-marker" id="fngMarker"></div>
                         </div>
                         <span class="fng-value" id="fngValue">50 Neutral</span>
+                    </div>
+
+                    <!-- === Market State Widget (Macro Heatmap) ===  ← ДОБАВЛЕНО -->
+                    <div class="ms-inline-slot">
+                        <div id="market-state-widget"></div>
                     </div>
                 </div>
 
@@ -2136,6 +2560,9 @@ class App {
 
     // Fear & Greed создаём здесь, но start() вызовем ПОСЛЕ render
     this.fng = new FearGreedManager(CONFIG.fearGreed);
+
+    // Market State Widget (Macro Heatmap)          ← ДОБАВЛЕНО
+    this.marketState = null;
   }
 
   async init() {
@@ -2144,6 +2571,10 @@ class App {
 
     // Запуск F&G — ТОЛЬКО после ui.render(), когда элементы уже в DOM
     this.fng.start();
+
+    // Запуск Market State Widget — рядом с F&G     ← ДОБАВЛЕНО
+    this.marketState = new MarketStateWidget();
+    this.marketState.start();
 
     this.wsManager = new WSManager((data) => this._handleKline(data));
     this.wsManager.onStatus = (connected) =>
@@ -2343,6 +2774,7 @@ class App {
     if (this._updateInterval) clearInterval(this._updateInterval);
     if (this._signalThrottle) clearTimeout(this._signalThrottle);
     if (this.fng) this.fng.stop();
+    if (this.marketState) this.marketState.stop(); // ← ДОБАВЛЕНО
     this.sound.clearAll();
     console.log("🧹 Приложение уничтожено");
   }

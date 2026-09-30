@@ -101,6 +101,7 @@ body {
 }
 .ws-status-group {
   display: flex;
+  margin-left: auto;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
@@ -121,6 +122,258 @@ body {
   font-size: 11px;
   color: #64748b;
   font-weight: 400;
+}
+
+/* ============================================================
+   MARKET STATE WIDGET (Macro Heatmap) — рядом с F&G
+   ============================================================ */
+
+/* Контейнер для Market State Widget в строке .tf-group */
+.ms-inline-slot {
+  margin-left: auto; /* прижимаем блок справа к F&G */
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+/* Чуть компактнее F&G, чтобы всё влезло в одну строку */
+.tf-group .fng-widget {
+  flex: 0 0 auto;
+}
+
+/* Виджет состояния рынка в компактном inline-режиме */
+.ms-widget {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 10px;
+  padding: 8px 12px;
+  color: #e2e8f0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
+  min-width: 300px;
+  max-width: 380px;
+  flex: 0 0 auto;
+}
+
+.ms-widget * {
+  box-sizing: border-box;
+}
+
+/* ---------- Header ---------- */
+.ms-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  gap: 8px;
+}
+
+.ms-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #cbd5e1;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ms-title::before {
+  content: "🌡";
+  font-size: 12px;
+}
+
+.ms-score-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 10px;
+}
+
+.ms-score-value {
+  font-weight: 700;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ms-score-label {
+  font-size: 9px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ---------- Heatmap bars ---------- */
+.ms-heatmap {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+
+.ms-row {
+  display: grid;
+  grid-template-columns: 78px 1fr 32px;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+}
+
+.ms-row-label {
+  color: #94a3b8;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.ms-bar-track {
+  position: relative;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.ms-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s ease, background-color 0.4s ease;
+  width: 0%;
+}
+
+.ms-bar-fill.ms-green {
+  background: linear-gradient(90deg, #16a34a, #22c55e);
+}
+.ms-bar-fill.ms-yellow {
+  background: linear-gradient(90deg, #ca8a04, #eab308);
+}
+.ms-bar-fill.ms-orange {
+  background: linear-gradient(90deg, #ea580c, #f97316);
+}
+.ms-bar-fill.ms-red {
+  background: linear-gradient(90deg, #b91c1c, #ef4444);
+}
+.ms-bar-fill.ms-blue {
+  background: linear-gradient(90deg, #1d4ed8, #3b82f6);
+}
+
+.ms-bar-value {
+  font-weight: 700;
+  font-size: 11px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: #e2e8f0;
+}
+
+/* ---------- Sub-metrics ---------- */
+.ms-details {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px 10px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  font-size: 9px;
+  color: #94a3b8;
+}
+
+.ms-detail {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.ms-detail-val {
+  color: #e2e8f0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.ms-detail-val.pos {
+  color: #34d399;
+}
+.ms-detail-val.neg {
+  color: #f87171;
+}
+
+/* ---------- Footer ---------- */
+.ms-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  font-size: 9px;
+  color: #64748b;
+}
+
+.ms-update {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ms-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 5px #22c55e;
+}
+
+.ms-dot.ms-loading {
+  background: #eab308;
+  box-shadow: 0 0 5px #eab308;
+  animation: ms-pulse 1.2s infinite;
+}
+
+.ms-dot.ms-error {
+  background: #ef4444;
+  box-shadow: 0 0 5px #ef4444;
+}
+
+@keyframes ms-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.ms-refresh-btn {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #94a3b8;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 9px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ms-refresh-btn:hover {
+  background: rgba(148, 163, 184, 0.15);
+  color: #e2e8f0;
+}
+
+/* Адаптив: на узких экранах переносим виджет под F&G */
+@media (max-width: 900px) {
+  .ms-inline-slot {
+    margin-left: 0;
+    width: 100%;
+  }
+  .ms-widget {
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+  }
 }
 
 /* ============================================================
@@ -167,7 +420,7 @@ body {
     #ff0000 0%,
     #f57c00 25%,
     #fbc02d 50%,
-    #7cb342 75%,
+    #9bde53 75%,
     #00ff0d 100%
   );
   overflow: hidden;
