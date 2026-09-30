@@ -370,12 +370,17 @@ body {
 }
 
 /* ---------- Компактная строка (высота = F&G = 20px) ---------- */
+
+#market-state-widget {
+  align-items: center;
+  justify-content: center;
+}
 .ms-compact {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   height: 20px;
-  padding: auto 8px;
+  padding: 0 8px;
   font-size: 12px;
   line-height: 1;
   color: #e2e8f0;
