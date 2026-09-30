@@ -2085,7 +2085,7 @@ class UIRenderer {
 
                 <div class="docs-wrapper">
                     <details>
-                        <summary>ДОКУМЕНТАЦИЯ</summary>
+                        <summary>ДОКУМЕНТАЦИЯ<span class="ms-compact-arrow">▼</span></summary>
                         <div class="docs-content">
                             ${this._buildDocs()}
                         </div>
