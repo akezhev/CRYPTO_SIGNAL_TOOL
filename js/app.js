@@ -1746,7 +1746,7 @@ class MarketStateWidget {
       </div>
       <div class="ms-panel">
         <div class="ms-panel-header">
-          <div class="ms-panel-title">Состояние рынка</div>
+          <div class="ms-panel-title">СОСТОЯНИЕ РЫНКА</div>
           <div class="ms-panel-macro">
             <span class="ms-panel-macro-value" style="color:#94a3b8;">--</span>
             <span class="ms-panel-macro-label">Macro</span>
