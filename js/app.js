@@ -1776,8 +1776,7 @@ class MarketStateWidget {
     const compactHtml = `
       <div class="ms-compact" title="Состояние рынка — Macro Heatmap">
         <span class="ms-compact-dot" id="ms-status-dot"></span>
-        <span class="ms-compact-icon">🌡</span>
-        <span class="ms-compact-label">Состояние рынка</span>
+        <span class="ms-compact-label">СОСТОЯНИЕ РЫНКА</span>
         <span class="ms-compact-value" style="color:${this._scoreColor(
           s.macro
         )};">${s.macro}</span>
