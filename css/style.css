@@ -38,7 +38,6 @@ body {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     sans-serif;
   background: rgba(16, 24, 40, 0.92);
-
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-radius: 24px;
@@ -66,7 +65,6 @@ body {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-
   text-shadow: 0 0 5px #ff005e, 0 0 10px #ff005e, 0 0 20px #ff005e,
     0 0 40px #ff005e, 0 0 80px #ff005e;
   animation: glow 1.5s infinite alternate;
@@ -121,346 +119,6 @@ body {
   font-size: 11px;
   color: #64748b;
   font-weight: 400;
-}
-
-/* ============================================================
-   MARKET STATE WIDGET (Macro Heatmap) — рядом с F&G
-   ============================================================ */
-
-/* Контейнер для Market State Widget в строке .tf-group */
-.ms-inline-slot {
-  margin-left: 8px; /* отступ от F&G */
-  display: flex;
-  align-items: center; /* выравнивание по центру строки ТФ */
-  gap: 8px;
-  flex: 0 0 auto; /* не растягивается */
-}
-
-/* F&G остаётся прижатым вправо и не сжимается */
-.tf-group .fng-widget {
-  flex: 0 0 auto;
-}
-
-/* Виджет состояния рынка в компактном inline-режиме */
-.ms-widget {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
-  border: 1px solid rgba(148, 163, 184, 0.15);
-  border-radius: 10px;
-  padding: 8px 12px;
-  color: #e2e8f0;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  box-sizing: border-box;
-  min-width: 260px;
-  max-width: 380px;
-  flex: 0 0 auto;
-}
-
-.ms-widget * {
-  box-sizing: border-box;
-}
-
-/* ---------- Header ---------- */
-.ms-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px;
-  gap: 8px;
-}
-
-.ms-title {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: #cbd5e1;
-  text-transform: uppercase;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.ms-title::before {
-  content: "🌡";
-  font-size: 12px;
-}
-
-.ms-score-badge {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 8px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 10px;
-}
-
-.ms-score-value {
-  font-weight: 700;
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-}
-
-.ms-score-label {
-  font-size: 9px;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-/* ---------- Heatmap bars ---------- */
-.ms-heatmap {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  margin-bottom: 6px;
-}
-
-.ms-row {
-  display: grid;
-  grid-template-columns: 78px 1fr 32px;
-  align-items: center;
-  gap: 8px;
-  font-size: 10px;
-}
-
-.ms-row-label {
-  color: #94a3b8;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.ms-bar-track {
-  position: relative;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.ms-bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.6s ease, background-color 0.4s ease;
-  width: 0%;
-}
-
-.ms-bar-fill.ms-green {
-  background: linear-gradient(90deg, #16a34a, #22c55e);
-}
-.ms-bar-fill.ms-yellow {
-  background: linear-gradient(90deg, #ca8a04, #eab308);
-}
-.ms-bar-fill.ms-orange {
-  background: linear-gradient(90deg, #ea580c, #f97316);
-}
-.ms-bar-fill.ms-red {
-  background: linear-gradient(90deg, #b91c1c, #ef4444);
-}
-.ms-bar-fill.ms-blue {
-  background: linear-gradient(90deg, #1d4ed8, #3b82f6);
-}
-
-.ms-bar-value {
-  font-weight: 700;
-  font-size: 11px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  color: #e2e8f0;
-}
-
-/* ---------- Sub-metrics ---------- */
-.ms-details {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 3px 10px;
-  padding-top: 6px;
-  border-top: 1px solid rgba(148, 163, 184, 0.12);
-  font-size: 9px;
-  color: #94a3b8;
-}
-
-.ms-detail {
-  display: flex;
-  justify-content: space-between;
-  gap: 4px;
-}
-
-.ms-detail-val {
-  color: #e2e8f0;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.ms-detail-val.pos {
-  color: #34d399;
-}
-.ms-detail-val.neg {
-  color: #f87171;
-}
-
-/* ---------- Footer ---------- */
-.ms-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px solid rgba(148, 163, 184, 0.12);
-  font-size: 9px;
-  color: #64748b;
-}
-
-.ms-update {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.ms-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #22c55e;
-  box-shadow: 0 0 5px #22c55e;
-}
-
-.ms-dot.ms-loading {
-  background: #eab308;
-  box-shadow: 0 0 5px #eab308;
-  animation: ms-pulse 1.2s infinite;
-}
-
-.ms-dot.ms-error {
-  background: #ef4444;
-  box-shadow: 0 0 5px #ef4444;
-}
-
-@keyframes ms-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.35;
-  }
-}
-
-.ms-refresh-btn {
-  background: transparent;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  color: #94a3b8;
-  border-radius: 4px;
-  padding: 1px 6px;
-  font-size: 9px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.ms-refresh-btn:hover {
-  background: rgba(148, 163, 184, 0.15);
-  color: #e2e8f0;
-}
-
-/* Адаптив: на узких экранах переносим виджет под F&G */
-@media (max-width: 900px) {
-  .ms-inline-slot {
-    margin-left: 0;
-    width: 100%;
-  }
-  .ms-widget {
-    max-width: 100%;
-    min-width: 0;
-    width: 100%;
-  }
-}
-
-/* ============================================================
-   FEAR & GREED WIDGET
-============================================================ */
-.fng-widget {
-  margin-left: auto; /* прижимаем вправо */
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 20px; /* меньше высоты кнопок TF */
-  font-size: 11px;
-  line-height: 1;
-  user-select: none;
-  pointer-events: none; /* не мешает кликам по TF */
-  flex-shrink: 0;
-}
-
-.fng-label {
-  opacity: 0.8;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  color: #ffffff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.fng-track {
-  position: relative;
-  width: 120px;
-  height: 14px;
-  border-radius: 4px;
-  background: linear-gradient(
-    90deg,
-    #ff0000 0%,
-    #f57c00 25%,
-    #fbc02d 50%,
-    #9bde53 75%,
-    #00ff0d 100%
-  );
-  overflow: hidden;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-}
-
-.fng-track::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  border-radius: inherit;
-  pointer-events: none;
-}
-
-.fng-marker {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 3px;
-  height: 12px;
-  background: #fff;
-  border-radius: 2px;
-  transform: translate(-50%, -50%);
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
-  transition: left 0.5s ease;
-}
-
-.fng-value {
-  min-width: 45px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  color: #fbbf24;
-  white-space: nowrap;
-}
-
-@media (max-width: 640px) {
-  .fng-label {
-    display: none;
-  }
-  .fng-track {
-    width: 70px;
-  }
-  .fng-value {
-    min-width: 60px;
-    font-size: 10px;
-  }
 }
 
 /* ============================================================
@@ -553,6 +211,17 @@ body {
 }
 
 /* ============================================================
+   ОСНОВНОЙ FLEX-КОНТЕЙНЕР СТРОКИ: TF + F&G + Market State
+============================================================ */
+.tf-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+/* ============================================================
    ТАЙМФРЕЙМЫ (кнопки)
 ============================================================ */
 .tf-btn {
@@ -581,36 +250,464 @@ body {
 }
 
 /* ============================================================
-   ОСНОВНОЙ FLEX-КОНТЕЙНЕР СТРОКИ: кнопки ТФ + F&G + Market State
-   (единое объявление .tf-group, без дубликатов)
-============================================================ */
-.tf-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
-}
-
-/* ============================================================
    СЧЕТЧИК СИГНАЛОВ
 ============================================================ */
 .signal-count-item {
   font-size: 15px;
   font-weight: 500;
-
   color: #94a3b8;
   background: #150121;
   border: 1px solid rgba(2, 42, 175, 0.08);
   border-radius: 20px;
-
   padding: 3px 11px;
   width: auto;
-
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
+}
+
+/* ============================================================
+   FEAR & GREED WIDGET
+============================================================ */
+.fng-widget {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 20px;
+  font-size: 11px;
+  line-height: 1;
+  user-select: none;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.fng-label {
+  opacity: 0.8;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fng-track {
+  position: relative;
+  width: 120px;
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    #ff0000 0%,
+    #f57c00 25%,
+    #fbc02d 50%,
+    #9bde53 75%,
+    #00ff0d 100%
+  );
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.fng-track::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.fng-marker {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 12px;
+  background: #fff;
+  border-radius: 2px;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
+  transition: left 0.5s ease;
+}
+
+.fng-value {
+  min-width: 45px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: #fbbf24;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .fng-label {
+    display: none;
+  }
+  .fng-track {
+    width: 70px;
+  }
+  .fng-value {
+    min-width: 60px;
+    font-size: 10px;
+  }
+}
+
+/* ============================================================
+   MARKET STATE WIDGET (Macro Heatmap) v2.0
+   Компактный inline + выпадающая панель деталей
+============================================================ */
+
+/* ---------- Inline-слот в строке .tf-group ---------- */
+.ms-inline-slot {
+  position: relative;
+  margin-left: 8px;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  z-index: 100;
+}
+
+/* ---------- Компактная строка (высота = F&G = 20px) ---------- */
+.ms-compact {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 20px;
+  padding: 0 8px;
+  font-size: 11px;
+  line-height: 1;
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 10px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  font-family: inherit;
+}
+
+.ms-compact:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+.ms-compact.ms-open {
+  background: rgba(96, 165, 250, 0.12);
+  border-color: rgba(96, 165, 250, 0.4);
+}
+
+.ms-compact-icon {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.ms-compact-label {
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: #cbd5e1;
+}
+
+.ms-compact-value {
+  font-weight: 700;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  min-width: 22px;
+  text-align: right;
+}
+
+.ms-compact-arrow {
+  font-size: 8px;
+  color: #64748b;
+  transition: transform 0.25s ease;
+  margin-left: 2px;
+}
+
+.ms-compact.ms-open .ms-compact-arrow {
+  transform: rotate(180deg);
+}
+
+/* Точка статуса внутри компактной строки */
+.ms-compact-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 5px #22c55e;
+  flex-shrink: 0;
+}
+.ms-compact-dot.ms-loading {
+  background: #eab308;
+  box-shadow: 0 0 5px #eab308;
+  animation: ms-pulse 1.2s infinite;
+}
+.ms-compact-dot.ms-error {
+  background: #ef4444;
+  box-shadow: 0 0 5px #ef4444;
+}
+
+@keyframes ms-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ---------- Выпадающая панель ---------- */
+.ms-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 340px;
+  max-width: 92vw;
+  padding: 12px 14px;
+  background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.03);
+  color: #e2e8f0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  box-sizing: border-box;
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 1000;
+}
+
+.ms-panel.ms-open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.ms-panel * {
+  box-sizing: border-box;
+}
+
+/* Заголовок панели */
+.ms-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.ms-panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #cbd5e1;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ms-panel-title::before {
+  content: "🌡";
+  font-size: 13px;
+}
+
+.ms-panel-macro {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 10px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 10px;
+}
+
+.ms-panel-macro-value {
+  font-weight: 700;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ms-panel-macro-label {
+  font-size: 9px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Heatmap bars */
+.ms-heatmap {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.ms-row {
+  display: grid;
+  grid-template-columns: 90px 1fr 36px;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+}
+
+.ms-row-label {
+  color: #94a3b8;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.ms-bar-track {
+  position: relative;
+  height: 7px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.ms-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s ease, background-color 0.4s ease;
+  width: 0%;
+}
+
+.ms-bar-fill.ms-green {
+  background: linear-gradient(90deg, #16a34a, #22c55e);
+}
+.ms-bar-fill.ms-yellow {
+  background: linear-gradient(90deg, #ca8a04, #eab308);
+}
+.ms-bar-fill.ms-orange {
+  background: linear-gradient(90deg, #ea580c, #f97316);
+}
+.ms-bar-fill.ms-red {
+  background: linear-gradient(90deg, #b91c1c, #ef4444);
+}
+.ms-bar-fill.ms-blue {
+  background: linear-gradient(90deg, #1d4ed8, #3b82f6);
+}
+
+.ms-bar-value {
+  font-weight: 700;
+  font-size: 12px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: #e2e8f0;
+}
+
+/* Sub-metrics grid */
+.ms-details {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px 14px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.ms-detail {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.ms-detail-val {
+  color: #e2e8f0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.ms-detail-val.pos {
+  color: #34d399;
+}
+.ms-detail-val.neg {
+  color: #f87171;
+}
+
+/* Футер панели */
+.ms-panel-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  font-size: 9px;
+  color: #64748b;
+}
+
+.ms-panel-update {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ms-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 5px #22c55e;
+}
+.ms-dot.ms-loading {
+  background: #eab308;
+  box-shadow: 0 0 5px #eab308;
+  animation: ms-pulse 1.2s infinite;
+}
+.ms-dot.ms-error {
+  background: #ef4444;
+  box-shadow: 0 0 5px #ef4444;
+}
+
+.ms-refresh-btn {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #94a3b8;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.ms-refresh-btn:hover {
+  background: rgba(148, 163, 184, 0.15);
+  color: #e2e8f0;
+}
+
+/* Адаптив Market State */
+@media (max-width: 900px) {
+  .ms-inline-slot {
+    margin-left: 0;
+  }
+  .ms-panel {
+    width: 320px;
+  }
+}
+
+@media (max-width: 640px) {
+  .ms-compact-label {
+    display: none;
+  }
+  .ms-panel {
+    right: auto;
+    left: 0;
+    width: calc(100vw - 40px);
+    max-width: 340px;
+  }
+  .ms-row {
+    grid-template-columns: 78px 1fr 32px;
+    font-size: 10px;
+  }
 }
 
 /* ============================================================
@@ -1330,15 +1427,12 @@ body {
 .docs-wrapper summary::-webkit-details-marker {
   display: none;
 }
-
 .docs-wrapper summary::before {
   content: "📖 ";
 }
-
 .docs-wrapper[open] summary::after {
   content: " ▲";
 }
-
 .docs-wrapper:not([open]) summary::after {
   content: " ▼";
 }

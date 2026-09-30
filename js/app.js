@@ -1,7 +1,7 @@
 // ============================================================
-//  МОДУЛЬ CRYPTO SIGNAL TOOL (v9.3)
-//  + Fear & Greed Index (рабочая версия с fallback)
-//  + Market State Widget (Macro Heatmap) — рядом с F&G
+//  МОДУЛЬ CRYPTO SIGNAL TOOL (v9.4)
+//  + Fear & Greed Index
+//  + Market State Widget (Macro Heatmap, компактный inline)
 // ============================================================
 
 // ---------- Конфигурация ----------
@@ -1306,7 +1306,7 @@ class WSManager {
 }
 
 // ============================================================
-//  Fear & Greed Index Manager (ИСПРАВЛЕННЫЙ)
+//  Fear & Greed Index Manager
 // ============================================================
 class FearGreedManager {
   constructor({ intervalMs = 5 * 60 * 1000, neutralFallback = 50 } = {}) {
@@ -1419,15 +1419,15 @@ class FearGreedManager {
 }
 
 // ============================================================
-//  MARKET STATE WIDGET (Macro Heatmap) v1.0            ← ДОБАВЛЕНО
-//  Отображается рядом с Fear & Greed в одной строке
+//  MARKET STATE WIDGET (Macro Heatmap) v2.0
+//  Компактный inline-виджет + выпадающая панель деталей
 // ============================================================
 class MarketStateWidget {
   static CONFIG = {
     containerId: "market-state-widget",
     refreshMs: 5 * 60 * 1000,
     cacheTTL: 4 * 60 * 1000,
-    cacheKey: "ms_widget_cache_v1",
+    cacheKey: "ms_widget_cache_v2",
     timeout: 8000,
     weights: {
       macro: { liquidity: 0.4, leverage: 0.3, breadth: 0.3 },
@@ -1443,36 +1443,73 @@ class MarketStateWidget {
     this._loading = false;
     this._lastData = null;
     this._container = null;
+    this._isOpen = false;
+
+    this._onDocClick = (e) => {
+      if (!this._isOpen) return;
+      if (this._container && !this._container.contains(e.target)) {
+        this._close();
+      }
+    };
+    this._onKeyDown = (e) => {
+      if (e.key === "Escape" && this._isOpen) this._close();
+    };
   }
 
   start() {
     this._container = document.getElementById(this.cfg.containerId);
     if (!this._container) {
-      console.warn(`⚠️ MarketStateWidget: #${this.cfg.containerId} не найден`);
+      console.warn(
+        `⚠️ MarketStateWidget: #${this.cfg.containerId} не найден в DOM`
+      );
       return;
     }
     this._renderSkeleton();
+
     const cached = this._getCache();
     if (cached) {
       this._lastData = cached;
       this._render(cached);
     }
+
     this._refresh();
     this._timer = setInterval(() => this._refresh(), this.cfg.refreshMs);
+
+    document.addEventListener("click", this._onDocClick);
+    document.addEventListener("keydown", this._onKeyDown);
   }
 
   stop() {
     if (this._timer) clearInterval(this._timer);
     this._timer = null;
+    document.removeEventListener("click", this._onDocClick);
+    document.removeEventListener("keydown", this._onKeyDown);
   }
 
-  async refreshNow() {
+  refreshNow() {
     return this._refresh(true);
   }
 
-  // ---------- Утилиты ----------
-  _clamp(v, min, max) {
-    return Math.max(min, Math.min(max, v));
+  _toggle() {
+    this._isOpen ? this._close() : this._open();
+  }
+  _open() {
+    this._isOpen = true;
+    const compact = this._container?.querySelector(".ms-compact");
+    const panel = this._container?.querySelector(".ms-panel");
+    if (compact) compact.classList.add("ms-open");
+    if (panel) panel.classList.add("ms-open");
+  }
+  _close() {
+    this._isOpen = false;
+    const compact = this._container?.querySelector(".ms-compact");
+    const panel = this._container?.querySelector(".ms-panel");
+    if (compact) compact.classList.remove("ms-open");
+    if (panel) panel.classList.remove("ms-open");
+  }
+
+  _clamp(v, a, b) {
+    return Math.max(a, Math.min(b, v));
   }
   _map(v, inMin, inMax, outMin = 0, outMax = 100) {
     if (inMax === inMin) return outMin;
@@ -1515,7 +1552,6 @@ class MarketStateWidget {
     }
   }
 
-  // ---------- Загрузка данных ----------
   async _fetchAll() {
     const tasks = await Promise.allSettled([
       this._fetchJSON("https://api.coingecko.com/api/v3/global"),
@@ -1555,7 +1591,6 @@ class MarketStateWidget {
     };
   }
 
-  // ---------- Нормализация в баллы 0-100 ----------
   _normVolume(v) {
     return this._map(this._log10(v / 1e9), this._log10(30), this._log10(300));
   }
@@ -1614,10 +1649,8 @@ class MarketStateWidget {
     return this._clamp((up / coins.length) * 100, 0, 100);
   }
 
-  // ---------- Композитные индексы ----------
   _computeScores(m) {
     const w = this.cfg.weights;
-
     const liquidity = Math.round(
       this._normVolume(m.totalVolume) * w.liquidity.volume +
         this._normMcap(m.totalMcap) * w.liquidity.mcap +
@@ -1641,7 +1674,6 @@ class MarketStateWidget {
     return { liquidity, leverage, breadth, macro };
   }
 
-  // ---------- Кэш ----------
   _getCache() {
     try {
       const raw = localStorage.getItem(this.cfg.cacheKey);
@@ -1662,7 +1694,6 @@ class MarketStateWidget {
     } catch {}
   }
 
-  // ---------- Refresh ----------
   async _refresh() {
     if (this._loading) return;
     this._loading = true;
@@ -1684,7 +1715,6 @@ class MarketStateWidget {
     }
   }
 
-  // ---------- Цвета/подписи ----------
   _scoreClass(v) {
     if (v >= 75) return "ms-green";
     if (v >= 55) return "ms-yellow";
@@ -1706,23 +1736,29 @@ class MarketStateWidget {
     return "Экстрим";
   }
 
-  // ---------- Рендер ----------
   _renderSkeleton() {
     this._container.innerHTML = `
-      <div class="ms-widget">
-        <div class="ms-header">
-          <div class="ms-title">Состояние рынка</div>
-          <div class="ms-score-badge">
-            <span class="ms-score-value" style="color:#94a3b8;">--</span>
-            <span class="ms-score-label">Macro</span>
+      <div class="ms-compact" title="Состояние рынка — Macro Heatmap">
+        <span class="ms-compact-dot ms-loading"></span>
+        <span class="ms-compact-icon">🌡</span>
+        <span class="ms-compact-label">Состояние рынка</span>
+        <span class="ms-compact-value" style="color:#94a3b8;">--</span>
+        <span class="ms-compact-arrow">▼</span>
+      </div>
+      <div class="ms-panel">
+        <div class="ms-panel-header">
+          <div class="ms-panel-title">Состояние рынка</div>
+          <div class="ms-panel-macro">
+            <span class="ms-panel-macro-value" style="color:#94a3b8;">--</span>
+            <span class="ms-panel-macro-label">Macro</span>
           </div>
         </div>
         <div class="ms-heatmap">
           ${["Ликвидность", "Плечо", "Широта"]
             .map(
-              (label) => `
+              (l) => `
             <div class="ms-row">
-              <span class="ms-row-label">${label}</span>
+              <span class="ms-row-label">${l}</span>
               <div class="ms-bar-track"><div class="ms-bar-fill ms-blue"></div></div>
               <span class="ms-bar-value">--</span>
             </div>
@@ -1730,15 +1766,26 @@ class MarketStateWidget {
             )
             .join("")}
         </div>
-        <div class="ms-footer">
-          <div class="ms-update"><span class="ms-dot ms-loading"></span> Загрузка...</div>
-        </div>
       </div>
     `;
+    this._bindEvents();
   }
 
   _render(data) {
     const s = data.scores;
+
+    const compactHtml = `
+      <div class="ms-compact" title="Состояние рынка — Macro Heatmap">
+        <span class="ms-compact-dot" id="ms-status-dot"></span>
+        <span class="ms-compact-icon">🌡</span>
+        <span class="ms-compact-label">Состояние рынка</span>
+        <span class="ms-compact-value" style="color:${this._scoreColor(
+          s.macro
+        )};">${s.macro}</span>
+        <span class="ms-compact-arrow">▼</span>
+      </div>
+    `;
+
     const rows = [
       { label: "Ликвидность", val: s.liquidity },
       { label: "Плечо", val: s.leverage },
@@ -1771,46 +1818,52 @@ class MarketStateWidget {
     const mcapChange = data.mcapChange24h.toFixed(2);
     const mcapCls = data.mcapChange24h >= 0 ? "pos" : "neg";
 
-    this._container.innerHTML = `
-      <div class="ms-widget">
-        <div class="ms-header">
-          <div class="ms-title">Состояние рынка</div>
-          <div class="ms-score-badge">
-            <span class="ms-score-value" style="color:${this._scoreColor(
+    const panelHtml = `
+      <div class="ms-panel">
+        <div class="ms-panel-header">
+          <div class="ms-panel-title">Состояние рынка</div>
+          <div class="ms-panel-macro">
+            <span class="ms-panel-macro-value" style="color:${this._scoreColor(
               s.macro
             )};">${s.macro}</span>
-            <span class="ms-score-label">${this._scoreLabel(s.macro)}</span>
+            <span class="ms-panel-macro-label">${this._scoreLabel(
+              s.macro
+            )}</span>
           </div>
         </div>
 
         <div class="ms-heatmap">${rowsHtml}</div>
 
         <div class="ms-details">
-          <div class="ms-detail"><span>Funding</span><span class="ms-detail-val ${fundingCls}">${fundingPct}%</span></div>
-          <div class="ms-detail"><span>L/S</span><span class="ms-detail-val ${lsCls}">${lsRatioStr}</span></div>
+          <div class="ms-detail"><span>Funding BTC</span><span class="ms-detail-val ${fundingCls}">${fundingPct}%</span></div>
+          <div class="ms-detail"><span>Long/Short</span><span class="ms-detail-val ${lsCls}">${lsRatioStr}</span></div>
           <div class="ms-detail"><span>BTC Dom</span><span class="ms-detail-val">${btcDom}%</span></div>
           <div class="ms-detail"><span>MCap 24h</span><span class="ms-detail-val ${mcapCls}">${mcapChange}%</span></div>
-          <div class="ms-detail"><span>Vol 24h</span><span class="ms-detail-val">$${this._fmtNum(
+          <div class="ms-detail"><span>Объём 24h</span><span class="ms-detail-val">$${this._fmtNum(
             data.totalVolume
           )}</span></div>
-          <div class="ms-detail"><span>MCap</span><span class="ms-detail-val">$${this._fmtNum(
+          <div class="ms-detail"><span>Капитализация</span><span class="ms-detail-val">$${this._fmtNum(
             data.totalMcap
           )}</span></div>
         </div>
 
-        <div class="ms-footer">
-          <div class="ms-update">
+        <div class="ms-panel-footer">
+          <div class="ms-panel-update">
             <span class="ms-dot" id="ms-status-dot"></span>
             <span id="ms-update-time">${this._fmtTime(
               data.ts || Date.now()
             )}</span>
           </div>
-          <button class="ms-refresh-btn" id="ms-refresh-btn">↻</button>
+          <button class="ms-refresh-btn" id="ms-refresh-btn">↻ Обновить</button>
         </div>
       </div>
     `;
-    const btn = this._container.querySelector("#ms-refresh-btn");
-    if (btn) btn.addEventListener("click", () => this.refreshNow());
+
+    this._container.innerHTML = compactHtml + panelHtml;
+
+    if (this._isOpen) this._open();
+
+    this._bindEvents();
   }
 
   _renderFallback() {
@@ -1827,13 +1880,38 @@ class MarketStateWidget {
     this._setStatus("error");
   }
 
+  _bindEvents() {
+    const compact = this._container.querySelector(".ms-compact");
+    const refreshBtn = this._container.querySelector("#ms-refresh-btn");
+
+    if (compact) {
+      compact.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this._toggle();
+      });
+    }
+    if (refreshBtn) {
+      refreshBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.refreshNow();
+      });
+    }
+  }
+
   _setStatus(status) {
     const dot = this._container?.querySelector("#ms-status-dot");
     const time = this._container?.querySelector("#ms-update-time");
+    const compactDot = this._container?.querySelector(".ms-compact-dot");
+
     if (dot) {
       dot.className = "ms-dot";
       if (status === "loading") dot.classList.add("ms-loading");
       else if (status === "error") dot.classList.add("ms-error");
+    }
+    if (compactDot) {
+      compactDot.className = "ms-compact-dot";
+      if (status === "loading") compactDot.classList.add("ms-loading");
+      else if (status === "error") compactDot.classList.add("ms-error");
     }
     if (time && status === "ok") time.textContent = this._fmtTime(Date.now());
   }
@@ -1971,7 +2049,7 @@ class UIRenderer {
                         <span class="fng-value" id="fngValue">50 Neutral</span>
                     </div>
 
-                    <!-- === Market State Widget (Macro Heatmap) ===  ← ДОБАВЛЕНО -->
+                    <!-- === Market State Widget (Macro Heatmap) === -->
                     <div class="ms-inline-slot">
                         <div id="market-state-widget"></div>
                     </div>
@@ -2558,10 +2636,10 @@ class App {
     this._loadingAssets = new Set();
     this._loadedTF = null;
 
-    // Fear & Greed создаём здесь, но start() вызовем ПОСЛЕ render
+    // Fear & Greed создаём здесь, start() — после render()
     this.fng = new FearGreedManager(CONFIG.fearGreed);
 
-    // Market State Widget (Macro Heatmap)          ← ДОБАВЛЕНО
+    // Market State Widget
     this.marketState = null;
   }
 
@@ -2569,10 +2647,10 @@ class App {
     this.ui.render();
     this._bindUIEvents();
 
-    // Запуск F&G — ТОЛЬКО после ui.render(), когда элементы уже в DOM
+    // F&G — после render(), когда DOM готов
     this.fng.start();
 
-    // Запуск Market State Widget — рядом с F&G     ← ДОБАВЛЕНО
+    // Market State Widget — после render()
     this.marketState = new MarketStateWidget();
     this.marketState.start();
 
@@ -2774,7 +2852,7 @@ class App {
     if (this._updateInterval) clearInterval(this._updateInterval);
     if (this._signalThrottle) clearTimeout(this._signalThrottle);
     if (this.fng) this.fng.stop();
-    if (this.marketState) this.marketState.stop(); // ← ДОБАВЛЕНО
+    if (this.marketState) this.marketState.stop();
     this.sound.clearAll();
     console.log("🧹 Приложение уничтожено");
   }
