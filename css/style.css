@@ -196,7 +196,7 @@ body {
 }
 
 .fng-value {
-  min-width: 50px;
+  min-width: 45px;
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
@@ -259,7 +259,7 @@ body {
 }
 
 .sound-toggle .sound-label {
-  font-size: 10px;
+  font-size: 8px;
   font-weight: 500;
 }
 
