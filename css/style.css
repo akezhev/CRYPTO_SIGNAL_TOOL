@@ -55,7 +55,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   flex-wrap: wrap;
   gap: 12px;
 }
@@ -95,6 +95,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  width: 100%;
   gap: 12px;
   flex-wrap: wrap;
 }
@@ -225,7 +226,7 @@ body {
   align-items: center;
   gap: 10px;
   background: rgba(255, 255, 255, 0.05);
-  padding: 3px;
+  padding: 2px;
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -263,6 +264,7 @@ body {
   font-weight: 500;
 }
 .sound-info {
+  padding-right: 5px;
   font-size: 10px;
   font-weight: 500;
 }
