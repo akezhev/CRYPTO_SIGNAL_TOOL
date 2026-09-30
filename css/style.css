@@ -14,7 +14,6 @@ body {
   background-position: center;
   background-repeat: no-repeat;
   background-attachment: fixed;
-  /* background-blend-mode: multiply; */
 
   display: flex;
   justify-content: center;
@@ -130,13 +129,14 @@ body {
 
 /* Контейнер для Market State Widget в строке .tf-group */
 .ms-inline-slot {
-  margin-left: auto; /* прижимаем блок справа к F&G */
+  margin-left: 8px; /* отступ от F&G */
   display: flex;
-  align-items: stretch;
+  align-items: center; /* выравнивание по центру строки ТФ */
   gap: 8px;
+  flex: 0 0 auto; /* не растягивается */
 }
 
-/* Чуть компактнее F&G, чтобы всё влезло в одну строку */
+/* F&G остаётся прижатым вправо и не сжимается */
 .tf-group .fng-widget {
   flex: 0 0 auto;
 }
@@ -151,7 +151,7 @@ body {
   color: #e2e8f0;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   box-sizing: border-box;
-  min-width: 300px;
+  min-width: 260px;
   max-width: 380px;
   flex: 0 0 auto;
 }
@@ -379,14 +379,6 @@ body {
 /* ============================================================
    FEAR & GREED WIDGET
 ============================================================ */
-/* ===== Fear & Greed widget (встроен в .tf-group) ===== */
-.tf-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
 .fng-widget {
   margin-left: auto; /* прижимаем вправо */
   display: flex;
@@ -490,7 +482,6 @@ body {
   color: #94a3b8;
   font-size: 20px;
   cursor: pointer;
-  /* padding: 4px 8px; */
   border-radius: 8px;
   transition: all 0.3s ease;
   font-family: inherit;
@@ -562,15 +553,8 @@ body {
 }
 
 /* ============================================================
-   ТАЙМФРЕЙМЫ
+   ТАЙМФРЕЙМЫ (кнопки)
 ============================================================ */
-.tf-group {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
 .tf-btn {
   padding: 6px 16px;
   border-radius: 12px;
@@ -594,6 +578,18 @@ body {
   background: rgba(96, 165, 250, 0.15);
   color: #60a5fa;
   border-color: rgba(96, 165, 250, 0.3);
+}
+
+/* ============================================================
+   ОСНОВНОЙ FLEX-КОНТЕЙНЕР СТРОКИ: кнопки ТФ + F&G + Market State
+   (единое объявление .tf-group, без дубликатов)
+============================================================ */
+.tf-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
 }
 
 /* ============================================================
