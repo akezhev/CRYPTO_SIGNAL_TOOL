@@ -375,8 +375,8 @@ body {
   align-items: center;
   gap: 6px;
   height: 20px;
-  padding: 0 8px;
-  font-size: 11px;
+  padding: auto 8px;
+  font-size: 12px;
   line-height: 1;
   color: #e2e8f0;
   background: rgba(255, 255, 255, 0.04);
