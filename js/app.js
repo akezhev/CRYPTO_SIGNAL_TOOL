@@ -2085,7 +2085,7 @@ class UIRenderer {
 
                 <div class="docs-wrapper">
                     <details>
-                        <summary>ДОКУМЕНТАЦИЯ<span class="ms-compact-arrow">▼</span></summary>
+                        <summary>ДОКУМЕНТАЦИЯ</summary>
                         <div class="docs-content">
                             ${this._buildDocs()}
                         </div>
@@ -2286,6 +2286,7 @@ class UIRenderer {
                 <br>
                 Как читать: >60% = альтам плохо. 40-50% = альтсезон близко. <40% = альт-эйфория.
                 <br>
+
                 <br>
                 4. MCap 24h — изменение капитализации за сутки
                 <br>

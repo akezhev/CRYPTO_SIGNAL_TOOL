@@ -1428,6 +1428,15 @@ body {
 .docs-wrapper summary::-webkit-details-marker {
   display: none;
 }
+.docs-wrapper summary::before {
+  content: "📖 ";
+}
+.docs-wrapper[open] summary::after {
+  content: " ▲";
+}
+.docs-wrapper:not([open]) summary::after {
+  content: " ▼";
+}
 
 .docs-content {
   margin-top: 16px;
