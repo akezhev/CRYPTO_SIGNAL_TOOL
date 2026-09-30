@@ -1523,7 +1523,7 @@ class UIRenderer {
                             <span class="sound-status" id="sound-status">
                                 <span class="sound-indicator on"></span>
                             </span>
-                            <span class="sound-label">Звук при ≥75%</span>
+                            <span class="sound-info">Звук при ≥75%</span>
                         </div>
                         <div class="ws-status-group">
                           <span class="ws-status" id="ws-status">⚡ Подключение...</span>

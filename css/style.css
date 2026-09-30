@@ -259,7 +259,11 @@ body {
 }
 
 .sound-toggle .sound-label {
-  font-size: 8px;
+  font-size: 10px;
+  font-weight: 500;
+}
+.sound-info {
+  font-size: 10px;
   font-weight: 500;
 }
 
