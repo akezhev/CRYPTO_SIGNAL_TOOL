@@ -372,6 +372,7 @@ body {
 /* ---------- Компактная строка (высота = F&G = 20px) ---------- */
 
 #market-state-widget {
+  display: flex;
   align-items: center;
   justify-content: center;
 }
