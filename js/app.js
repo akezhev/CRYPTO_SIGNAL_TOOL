@@ -1852,6 +1852,7 @@ class MarketStateWidget {
               data.ts || Date.now()
             )}</span>
           </div>
+          <span>ДОКУМЕНТАЦИЯ<span class="ms-compact-arrow">▼</span></span>
           <button class="ms-refresh-btn" id="ms-refresh-btn">↻ Обновить</button>
         </div>
       </div>
