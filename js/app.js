@@ -2,7 +2,7 @@
 //  МОДУЛЬ CRYPTO SIGNAL TOOL (v9.5)
 //  + Fear & Greed Index
 //  + Market State Widget (Macro Heatmap, компактный inline)
-//  + Выпадающая документация в ms-panel
+//  + Выпадающая документация под ms-panel
 // ============================================================
 
 // ---------- Конфигурация ----------
@@ -1421,7 +1421,7 @@ class FearGreedManager {
 
 // ============================================================
 //  MARKET STATE WIDGET (Macro Heatmap) v2.1
-//  + выпадающая документация
+//  + выпадающая документация под ms-panel
 // ============================================================
 class MarketStateWidget {
   static CONFIG = {
@@ -1508,15 +1508,19 @@ class MarketStateWidget {
     const compact = this._container?.querySelector(".ms-compact");
     const panel = this._container?.querySelector(".ms-panel");
     const docs = this._container?.querySelector(".ms-docs-panel");
+    const arrow = this._container?.querySelector(".ms-docs-arrow");
     if (compact) compact.classList.remove("ms-open");
     if (panel) panel.classList.remove("ms-open");
     if (docs) docs.classList.remove("ms-open");
+    if (arrow) arrow.classList.remove("ms-open");
   }
 
   _toggleDocs() {
     this._isDocsOpen = !this._isDocsOpen;
     const docs = this._container?.querySelector(".ms-docs-panel");
+    const arrow = this._container?.querySelector(".ms-docs-arrow");
     if (docs) docs.classList.toggle("ms-open", this._isDocsOpen);
+    if (arrow) arrow.classList.toggle("ms-open", this._isDocsOpen);
   }
 
   _clamp(v, a, b) {
@@ -1755,35 +1759,37 @@ class MarketStateWidget {
         <span class="ms-compact-value" style="color:#94a3b8;">--</span>
         <span class="ms-compact-arrow">▶</span>
       </div>
-      <div class="ms-panel">
-        <div class="ms-panel-header">
-          <div class="ms-panel-title">СОСТОЯНИЕ РЫНКА</div>
-          <div class="ms-panel-macro">
-            <span class="ms-panel-macro-value" style="color:#94a3b8;">--</span>
-            <span class="ms-panel-macro-label">Macro</span>
+      <div class="ms-dropdown-wrap">
+        <div class="ms-panel">
+          <div class="ms-panel-header">
+            <div class="ms-panel-title">СОСТОЯНИЕ РЫНКА</div>
+            <div class="ms-panel-macro">
+              <span class="ms-panel-macro-value" style="color:#94a3b8;">--</span>
+              <span class="ms-panel-macro-label">Macro</span>
+            </div>
+          </div>
+          <div class="ms-heatmap">
+            ${["Ликвидность", "Плечо", "Широта"]
+              .map(
+                (l) => `
+              <div class="ms-row">
+                <span class="ms-row-label">${l}</span>
+                <div class="ms-bar-track"><div class="ms-bar-fill ms-blue"></div></div>
+                <span class="ms-bar-value">--</span>
+              </div>
+            `
+              )
+              .join("")}
           </div>
         </div>
-        <div class="ms-heatmap">
-          ${["Ликвидность", "Плечо", "Широта"]
-            .map(
-              (l) => `
-            <div class="ms-row">
-              <span class="ms-row-label">${l}</span>
-              <div class="ms-bar-track"><div class="ms-bar-fill ms-blue"></div></div>
-              <span class="ms-bar-value">--</span>
-            </div>
-          `
-            )
-            .join("")}
-        </div>
-      </div>
-      <div class="ms-docs-panel">
-        <div class="ms-docs-header">
-          <span>📖 ДОКУМЕНТАЦИЯ</span>
-          <button class="ms-docs-close">✕</button>
-        </div>
-        <div class="ms-docs-content">
-          <p>Загрузка документации...</p>
+        <div class="ms-docs-panel">
+          <div class="ms-docs-header">
+            <span>📖 ДОКУМЕНТАЦИЯ</span>
+            <button class="ms-docs-close">✕</button>
+          </div>
+          <div class="ms-docs-content">
+            <p>Загрузка документации...</p>
+          </div>
         </div>
       </div>
     `;
@@ -1837,106 +1843,110 @@ class MarketStateWidget {
     const mcapCls = data.mcapChange24h >= 0 ? "pos" : "neg";
 
     const panelHtml = `
-      <div class="ms-panel">
-        <div class="ms-panel-header">
-          <div class="ms-panel-title">Состояние рынка</div>
-          <div class="ms-panel-macro">
-            <span class="ms-panel-macro-value" style="color:${this._scoreColor(
-              s.macro
-            )};">${s.macro}</span>
-            <span class="ms-panel-macro-label">${this._scoreLabel(
-              s.macro
-            )}</span>
+      <div class="ms-dropdown-wrap">
+        <div class="ms-panel">
+          <div class="ms-panel-header">
+            <div class="ms-panel-title">Состояние рынка</div>
+            <div class="ms-panel-macro">
+              <span class="ms-panel-macro-value" style="color:${this._scoreColor(
+                s.macro
+              )};">${s.macro}</span>
+              <span class="ms-panel-macro-label">${this._scoreLabel(
+                s.macro
+              )}</span>
+            </div>
+          </div>
+
+          <div class="ms-heatmap">${rowsHtml}</div>
+
+          <div class="ms-details">
+            <div class="ms-detail"><span>Funding BTC</span><span class="ms-detail-val ${fundingCls}">${fundingPct}%</span></div>
+            <div class="ms-detail"><span>Long/Short</span><span class="ms-detail-val ${lsCls}">${lsRatioStr}</span></div>
+            <div class="ms-detail"><span>BTC Dom</span><span class="ms-detail-val">${btcDom}%</span></div>
+            <div class="ms-detail"><span>MCap 24h</span><span class="ms-detail-val ${mcapCls}">${mcapChange}%</span></div>
+            <div class="ms-detail"><span>Объём 24h</span><span class="ms-detail-val">$${this._fmtNum(
+              data.totalVolume
+            )}</span></div>
+            <div class="ms-detail"><span>Капитализация</span><span class="ms-detail-val">$${this._fmtNum(
+              data.totalMcap
+            )}</span></div>
+          </div>
+
+          <div class="ms-panel-footer">
+            <div class="ms-panel-update">
+              <span class="ms-dot" id="ms-status-dot"></span>
+              <span id="ms-update-time">${this._fmtTime(
+                data.ts || Date.now()
+              )}</span>
+            </div>
+            <button class="ms-refresh-btn" id="ms-refresh-btn">↻ Обновить</button>
+            <button class="ms-docs-btn" id="ms-docs-btn">
+              ДОКУМЕНТАЦИЯ<span class="ms-compact-arrow ms-docs-arrow">▼</span>
+            </button>
           </div>
         </div>
 
-        <div class="ms-heatmap">${rowsHtml}</div>
-
-        <div class="ms-details">
-          <div class="ms-detail"><span>Funding BTC</span><span class="ms-detail-val ${fundingCls}">${fundingPct}%</span></div>
-          <div class="ms-detail"><span>Long/Short</span><span class="ms-detail-val ${lsCls}">${lsRatioStr}</span></div>
-          <div class="ms-detail"><span>BTC Dom</span><span class="ms-detail-val">${btcDom}%</span></div>
-          <div class="ms-detail"><span>MCap 24h</span><span class="ms-detail-val ${mcapCls}">${mcapChange}%</span></div>
-          <div class="ms-detail"><span>Объём 24h</span><span class="ms-detail-val">$${this._fmtNum(
-            data.totalVolume
-          )}</span></div>
-          <div class="ms-detail"><span>Капитализация</span><span class="ms-detail-val">$${this._fmtNum(
-            data.totalMcap
-          )}</span></div>
-        </div>
-
-        <div class="ms-panel-footer">
-          <div class="ms-panel-update">
-            <span class="ms-dot" id="ms-status-dot"></span>
-            <span id="ms-update-time">${this._fmtTime(
-              data.ts || Date.now()
-            )}</span>
+        <div class="ms-docs-panel">
+          <div class="ms-docs-header">
+            <span>📖 ДОКУМЕНТАЦИЯ</span>
+            <button class="ms-docs-close">✕</button>
           </div>
-          <button class="ms-refresh-btn" id="ms-refresh-btn">↻ Обновить</button>
-          <button class="ms-docs-btn" id="ms-docs-btn">ДОКУМЕНТАЦИЯ</button>
+          <div class="ms-docs-content">
+            <h3>СОСТОЯНИЕ РЫНКА</h3>
+            <p>Виджет агрегирует 3 композитных индекса (Ликвидность, Плечо, Широта) в 1 итоговый Macro Score. Каждый индекс и Macro находятся в диапазоне 0–100.</p>
+            <h4>Как читать баллы (общая шкала)</h4>
+            <ul>
+              <li>75–100 🟢 Очень здоровый — Рынок сильный, тренд устойчив, можно торговать</li>
+              <li>55–74 🟡 Здоровый/нейтральный — Смешанные сигналы, торгуйте осторожно</li>
+              <li>40–54 🟠 Осторожно — Риски растут, снижайте плечо</li>
+              <li>20–39 🔴 Риск — Перегрев/паника, лучше в стороне</li>
+              <li>0–19 🔴 Экстрим — Кризис, экстремальные условия</li>
+            </ul>
+            <p><strong>Важно:</strong> это не сигнал покупать/продавать. Это контекст — фильтр, который говорит «сейчас хорошее время для сделок» или «сейчас всё против вас». Сигнал даёт основной движок (7 индикаторов), а виджет помогает решить, стоит ли вообще торговать сейчас.</p>
+            <p><strong>1. Ликвидность</strong> — это «толщина» рынка. Насколько легко купить или продать актив без сильного движения цены. Чем выше ликвидность — тем больше денег ходит по рынку, тем меньше проскальзывание в сделках, тем стабильнее цены.</p>
+            <p><strong>2. Плечо</strong> — это кредитное плечо, которое используют трейдеры для увеличения потенциальной прибыли. Чем больше плечо — тем больше потенциальная прибыль, но и больше потенциальные потери.</p>
+            <p><strong>3. Широта</strong> — это количество торговых пар, в которых можно торговать активом. Чем больше широта — тем больше возможностей для торговли, но и больше рисков.</p>
+            <p><strong>Правило:</strong> чем выше Macro → тем больше размер позиции и агрессия. Чем ниже → тем меньше и осторожнее.</p>
+            <p><strong>Финальный совет:</strong> используйте виджет не как сигнал, а как фильтр. Он говорит: «сейчас хорошее время торговать» или «лучше не лезть».</p>
+            <h4>ПОКАЗАТЕЛИ СОСТОЯНИЯ РЫНКА</h4>
+            <p><strong>1. Funding BTC</strong> — ставка финансирования. Формат: +0.0124%</p>
+            <ul>
+              <li>🟢 зелёный: −0.05% до +0.05% (здоровый диапазон)</li>
+              <li>🔴 красный: вне этого диапазона (перегрев/паника)</li>
+            </ul>
+            <p>Как читать: +0.01% — норма. +0.1% — экстрим (все лонги платят грабительские ставки). −0.1% — паника шортов.</p>
+            <p><strong>2. Long/Short</strong> — соотношение счетов. Формат: 1.42</p>
+            <ul>
+              <li>🟢 зелёный: 0.6 – 2.2 (здоровый баланс)</li>
+              <li>🔴 красный: &lt; 0.6 или &gt; 2.2 (перекос)</li>
+            </ul>
+            <p>Как читать: 1.0 = идеальный баланс. 2.0+ = большинство в лонгах (риск). 0.5 = большинство в шортах (паника).</p>
+            <p><strong>3. BTC Dom</strong> — доминирование BTC. Формат: 52.3%</p>
+            <p>Серый цвет (не оценивается как +/-). Как читать: &gt;60% = альтам плохо. 40-50% = альтсезон близко. &lt;40% = альт-эйфория.</p>
+            <p><strong>4. MCap 24h</strong> — изменение капитализации за сутки. Формат: +1.2%</p>
+            <ul>
+              <li>🟢 зелёный: положительное</li>
+              <li>🔴 красный: отрицательное</li>
+            </ul>
+            <p>Как читать: ±1% = спокойный день. ±5% = активный день. ±10% = экстрим.</p>
+            <p><strong>5. Объём 24h</strong> — объём торгов за сутки. Формат: $85.3B или $2.1T</p>
+            <p>Нейтральный цвет. Как читать: выше $100B — высокий интерес. Ниже $30B — тонко.</p>
+            <p><strong>6. Капитализация</strong> — общая капитализация. Формат: $2.4T</p>
+            <p>Нейтральный цвет. Как читать: абсолютная цифра. Важна динамика, а не само значение.</p>
+            <p><strong>Итоговый Macro Score = Ликвидность × 0.4 + Плечо × 0.3 + Широта × 0.3</strong></p>
+          </div>
         </div>
       </div>
     `;
 
-    const docsHtml = `
-      <div class="ms-docs-panel">
-        <div class="ms-docs-header">
-          <span>📖 ДОКУМЕНТАЦИЯ</span>
-          <button class="ms-docs-close">✕</button>
-        </div>
-        <div class="ms-docs-content">
-          <h3>СОСТОЯНИЕ РЫНКА</h3>
-          <p>Виджет агрегирует 3 композитных индекса (Ликвидность, Плечо, Широта) в 1 итоговый Macro Score. Каждый индекс и Macro находятся в диапазоне 0–100.</p>
-          <h4>Как читать баллы (общая шкала)</h4>
-          <ul>
-            <li>75–100 🟢 Очень здоровый — Рынок сильный, тренд устойчив, можно торговать</li>
-            <li>55–74 🟡 Здоровый/нейтральный — Смешанные сигналы, торгуйте осторожно</li>
-            <li>40–54 🟠 Осторожно — Риски растут, снижайте плечо</li>
-            <li>20–39 🔴 Риск — Перегрев/паника, лучше в стороне</li>
-            <li>0–19 🔴 Экстрим — Кризис, экстремальные условия</li>
-          </ul>
-          <p><strong>Важно:</strong> это не сигнал покупать/продавать. Это контекст — фильтр, который говорит «сейчас хорошее время для сделок» или «сейчас всё против вас». Сигнал даёт основной движок (7 индикаторов), а виджет помогает решить, стоит ли вообще торговать сейчас.</p>
-          <p><strong>1. Ликвидность</strong> — это «толщина» рынка. Насколько легко купить или продать актив без сильного движения цены. Чем выше ликвидность — тем больше денег ходит по рынку, тем меньше проскальзывание в сделках, тем стабильнее цены.</p>
-          <p><strong>2. Плечо</strong> — это кредитное плечо, которое используют трейдеры для увеличения потенциальной прибыли. Чем больше плечо — тем больше потенциальная прибыль, но и больше потенциальные потери.</p>
-          <p><strong>3. Широта</strong> — это количество торговых пар, в которых можно торговать активом. Чем больше широта — тем больше возможностей для торговли, но и больше рисков.</p>
-          <p><strong>Правило:</strong> чем выше Macro → тем больше размер позиции и агрессия. Чем ниже → тем меньше и осторожнее.</p>
-          <p><strong>Финальный совет:</strong> используйте виджет не как сигнал, а как фильтр. Он говорит: «сейчас хорошее время торговать» или «лучше не лезть».</p>
-          <h4>ПОКАЗАТЕЛИ СОСТОЯНИЯ РЫНКА</h4>
-          <p><strong>1. Funding BTC</strong> — ставка финансирования. Формат: +0.0124%</p>
-          <ul>
-            <li>🟢 зелёный: −0.05% до +0.05% (здоровый диапазон)</li>
-            <li>🔴 красный: вне этого диапазона (перегрев/паника)</li>
-          </ul>
-          <p>Как читать: +0.01% — норма. +0.1% — экстрим (все лонги платят грабительские ставки). −0.1% — паника шортов.</p>
-          <p><strong>2. Long/Short</strong> — соотношение счетов. Формат: 1.42</p>
-          <ul>
-            <li>🟢 зелёный: 0.6 – 2.2 (здоровый баланс)</li>
-            <li>🔴 красный: &lt; 0.6 или &gt; 2.2 (перекос)</li>
-          </ul>
-          <p>Как читать: 1.0 = идеальный баланс. 2.0+ = большинство в лонгах (риск). 0.5 = большинство в шортах (паника).</p>
-          <p><strong>3. BTC Dom</strong> — доминирование BTC. Формат: 52.3%</p>
-          <p>Серый цвет (не оценивается как +/-). Как читать: &gt;60% = альтам плохо. 40-50% = альтсезон близко. &lt;40% = альт-эйфория.</p>
-          <p><strong>4. MCap 24h</strong> — изменение капитализации за сутки. Формат: +1.2%</p>
-          <ul>
-            <li>🟢 зелёный: положительное</li>
-            <li>🔴 красный: отрицательное</li>
-          </ul>
-          <p>Как читать: ±1% = спокойный день. ±5% = активный день. ±10% = экстрим.</p>
-          <p><strong>5. Объём 24h</strong> — объём торгов за сутки. Формат: $85.3B или $2.1T</p>
-          <p>Нейтральный цвет. Как читать: выше $100B — высокий интерес. Ниже $30B — тонко.</p>
-          <p><strong>6. Капитализация</strong> — общая капитализация. Формат: $2.4T</p>
-          <p>Нейтральный цвет. Как читать: абсолютная цифра. Важна динамика, а не само значение.</p>
-          <p><strong>Итоговый Macro Score = Ликвидность × 0.4 + Плечо × 0.3 + Широта × 0.3</strong></p>
-        </div>
-      </div>
-    `;
-
-    this._container.innerHTML = compactHtml + panelHtml + docsHtml;
+    this._container.innerHTML = compactHtml + panelHtml;
 
     if (this._isOpen) this._open();
     if (this._isDocsOpen) {
       const docs = this._container.querySelector(".ms-docs-panel");
+      const arrow = this._container.querySelector(".ms-docs-arrow");
       if (docs) docs.classList.add("ms-open");
+      if (arrow) arrow.classList.add("ms-open");
     }
 
     this._bindEvents();
@@ -1985,7 +1995,9 @@ class MarketStateWidget {
         e.stopPropagation();
         this._isDocsOpen = false;
         const docs = this._container.querySelector(".ms-docs-panel");
+        const arrow = this._container.querySelector(".ms-docs-arrow");
         if (docs) docs.classList.remove("ms-open");
+        if (arrow) arrow.classList.remove("ms-open");
       });
     }
   }
@@ -2102,7 +2114,7 @@ class UIRenderer {
                 <div class="widget-header">
                     <div>
                         <span class="widget-title">⚛ CRYPTO SIGNAL TOOL ⚛</span>
-                        <span class="widget-version">v9.6 • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin) •</span>
+                        <span class="widget-version">v9.5 • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin) •</span>
                     </div>
                     <div class="widget-status-group">
                         <div class="sound-controls">
