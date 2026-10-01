@@ -1,10 +1,10 @@
 // ============================================================
-//  МОДУЛЬ CRYPTO SIGNAL TOOL (v9.9)
+//  МОДУЛЬ CRYPTO SIGNAL TOOL (v10.0)
 //  + Fear & Greed Index
 //  + Market State Widget (Macro Heatmap)
 //  + Выпадающая документация справа под ms-panel
 //  + TF-arrow: выпадающая карточка doc-card активного TF
-//  + Исправлена шкала _scoreLabel (5 категорий по документации)
+//  + При смене TF панель ОСТАЁТСЯ открытой, меняется только контент
 // ============================================================
 
 // ---------- Конфигурация ----------
@@ -60,13 +60,11 @@ const CONFIG = {
 };
 
 // ---------- Единая шкала Macro Score ----------
-// Используется и в ms-panel (label), и в документации — чтобы не было расхождений.
 const MACRO_SCALE = [
   {
     min: 75,
     max: 100,
     label: "Очень здоровый",
-    short: "Очень здоровый",
     color: "#22c55e",
     barClass: "ms-green",
   },
@@ -74,7 +72,6 @@ const MACRO_SCALE = [
     min: 55,
     max: 74,
     label: "Здоровый",
-    short: "Здоровый",
     color: "#eab308",
     barClass: "ms-yellow",
   },
@@ -82,26 +79,11 @@ const MACRO_SCALE = [
     min: 40,
     max: 54,
     label: "Осторожно",
-    short: "Осторожно",
     color: "#f97316",
     barClass: "ms-orange",
   },
-  {
-    min: 20,
-    max: 39,
-    label: "Риск",
-    short: "Риск",
-    color: "#ef4444",
-    barClass: "ms-red",
-  },
-  {
-    min: 0,
-    max: 19,
-    label: "Экстрим",
-    short: "Экстрим",
-    color: "#ef4444",
-    barClass: "ms-red",
-  },
+  { min: 20, max: 39, label: "Риск", color: "#ef4444", barClass: "ms-red" },
+  { min: 0, max: 19, label: "Экстрим", color: "#ef4444", barClass: "ms-red" },
 ];
 
 // ---------- Гайды по таймфреймам ----------
@@ -1536,8 +1518,7 @@ class FearGreedManager {
 }
 
 // ============================================================
-//  MARKET STATE WIDGET (Macro Heatmap) v2.6
-//  + Исправлена шкала _scoreLabel — 5 категорий по документации
+//  MARKET STATE WIDGET (Macro Heatmap) v2.7
 // ============================================================
 class MarketStateWidget {
   static CONFIG = {
@@ -1848,13 +1829,11 @@ class MarketStateWidget {
     }
   }
 
-  // Возвращает объект из MACRO_SCALE по значению 0..100
   _scaleInfo(v) {
     const x = utils.clamp(Math.round(v), 0, 100);
     for (const s of MACRO_SCALE) {
       if (x >= s.min && x <= s.max) return s;
     }
-    // fallback — на всякий случай
     return MACRO_SCALE[MACRO_SCALE.length - 1];
   }
 
@@ -2141,6 +2120,12 @@ class MarketStateWidget {
 
 // ============================================================
 //  TF GUIDE PANEL (◂ выпадающая панель с doc-card активного TF)
+//  Логика:
+//   • При смене TF панель ОСТАЁТСЯ открытой (если была открыта),
+//     содержимое просто перерисовывается.
+//   • Закрыть можно: повторным кликом на ◂, кнопкой ✕,
+//     кликом вне панели или Escape.
+//   • Клик по .tf-btn (смена таймфрейма) НЕ закрывает панель.
 // ============================================================
 class TFGuidePanel {
   constructor() {
@@ -2149,20 +2134,32 @@ class TFGuidePanel {
       trigger: null,
       wrap: null,
       body: null,
-      arrow: null,
+      closeBtn: null,
     };
     this._currentTF = CONFIG.defaultTF;
 
     this._onDocClick = (e) => {
       if (!this._isOpen) return;
-      if (
-        this._el.wrap &&
-        !this._el.wrap.contains(e.target) &&
-        !this._el.trigger?.contains(e.target)
-      ) {
-        this.close();
-      }
+
+      // Игнорируем клики по самому триггеру ◂ — их обрабатывает
+      // отдельный listener на кнопке (через toggle).
+      if (this._el.trigger && this._el.trigger.contains(e.target)) return;
+
+      // Игнорируем клики по кнопкам таймфреймов — они не должны
+      // закрывать панель, а лишь менять содержимое.
+      const tfBtn = e.target.closest?.(".tf-btn");
+      if (tfBtn) return;
+
+      // Игнорируем клики по кнопке закрытия — обрабатывается отдельно.
+      if (this._el.closeBtn && this._el.closeBtn.contains(e.target)) return;
+
+      // Клик внутри панели — не закрываем.
+      if (this._el.wrap && this._el.wrap.contains(e.target)) return;
+
+      // Всё остальное — закрываем.
+      this.close();
     };
+
     this._onKeyDown = (e) => {
       if (e.key === "Escape" && this._isOpen) this.close();
     };
@@ -2172,7 +2169,7 @@ class TFGuidePanel {
     this._el.trigger = document.querySelector(".tf-arrow");
     this._el.wrap = document.getElementById("tf-guide-panel");
     this._el.body = document.getElementById("tf-guide-body");
-    this._el.arrow = document.querySelector(".tf-arrow");
+    this._el.closeBtn = document.querySelector(".tf-guide-panel-close");
 
     if (!this._el.trigger || !this._el.wrap || !this._el.body) {
       console.warn("⚠️ TFGuidePanel: элементы не найдены в DOM");
@@ -2186,6 +2183,13 @@ class TFGuidePanel {
       this.toggle();
     });
 
+    if (this._el.closeBtn) {
+      this._el.closeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.close();
+      });
+    }
+
     document.addEventListener("click", this._onDocClick);
     document.addEventListener("keydown", this._onKeyDown);
   }
@@ -2195,9 +2199,17 @@ class TFGuidePanel {
     document.removeEventListener("keydown", this._onKeyDown);
   }
 
+  /**
+   * Смена таймфрейма.
+   * ВАЖНО: панель НЕ закрывается и НЕ открывается принудительно —
+   * её видимость (open/close) управляется отдельно. Здесь
+   * меняется только содержимое карточки.
+   */
   setTF(tf) {
     this._currentTF = tf;
     this._renderCard(tf);
+    // Если панель открыта — она остаётся открытой.
+    // Если закрыта — остаётся закрытой.
   }
 
   toggle() {
@@ -2207,13 +2219,13 @@ class TFGuidePanel {
   open() {
     this._isOpen = true;
     this._el.wrap?.classList.add("ms-open");
-    this._el.arrow?.classList.add("active");
+    this._el.trigger?.classList.add("active");
   }
 
   close() {
     this._isOpen = false;
     this._el.wrap?.classList.remove("ms-open");
-    this._el.arrow?.classList.remove("active");
+    this._el.trigger?.classList.remove("active");
   }
 
   _renderCard(tf) {
@@ -2331,7 +2343,7 @@ class UIRenderer {
                 <div class="widget-header">
                     <div>
                         <span class="widget-title">⚛ CRYPTO SIGNAL TOOL ⚛</span>
-                        <span class="widget-version">v9.9 • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin) •</span>
+                        <span class="widget-version">v9.8 • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin) •</span>
                     </div>
                     <div class="widget-status-group">
                         <div class="sound-controls">
@@ -2356,6 +2368,7 @@ class UIRenderer {
                         <div class="tf-guide-panel" id="tf-guide-panel">
                             <div class="tf-guide-panel-header">
                                 <span>📖 ГАЙД ТАЙМФРЕЙМА</span>
+                                <button class="tf-guide-panel-close" type="button" title="Закрыть">✕</button>
                             </div>
                             <div class="tf-guide-panel-body" id="tf-guide-body"></div>
                         </div>
@@ -2572,6 +2585,8 @@ class UIRenderer {
           .forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
         this.currentTF = btn.dataset.tf;
+        // Меняем содержимое карточки. Панель остаётся в текущем
+        // состоянии (открыта/закрыта) — это ключевое требование.
         this.tfGuide.setTF(this.currentTF);
         if (this.onTFChange) this.onTFChange(this.currentTF);
       });

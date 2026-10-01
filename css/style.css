@@ -260,8 +260,11 @@ body {
   border: none;
   cursor: pointer;
   padding: 4px 6px;
-  border-radius: 6px;
-  transition: background 0.2s ease;
+  border-radius: 50%;
+  font-size: 16px;
+  color: rgb(66, 179, 250);
+  transition: transform 0.25s ease, background 0.2s ease;
+  margin: 0 2px;
   font-family: inherit;
 }
 
@@ -269,12 +272,6 @@ body {
   background: rgba(66, 179, 250, 0.12);
 }
 
-.tf-arrow {
-  font-size: 12px;
-  color: rgb(66, 179, 250);
-  transition: transform 0.25s ease, background 0.2s ease;
-  margin: 0 2px;
-}
 .tf-arrow.active {
   transform: rotate(180deg);
 }
@@ -284,7 +281,7 @@ body {
   position: absolute;
   top: 0;
   right: calc(100% + 8px);
-  width: 260px;
+  width: 280px;
   max-width: 92vw;
   padding: 10px 12px;
   background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
@@ -322,6 +319,26 @@ body {
   letter-spacing: 0.08em;
   color: #cbd5e1;
   text-transform: uppercase;
+  gap: 8px;
+}
+
+.tf-guide-panel-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.2s ease, color 0.2s ease;
+  font-family: inherit;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.tf-guide-panel-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
 }
 
 .tf-guide-panel-body {
@@ -966,7 +983,7 @@ body {
     left: 0;
     top: calc(100% + 8px);
     width: calc(100vw - 40px);
-    max-width: 280px;
+    max-width: 300px;
     transform: translateY(-6px);
   }
   .tf-guide-panel.ms-open {
@@ -1663,7 +1680,7 @@ body {
 }
 
 /* ============================================================
-   DOCS WRAPPER (нижняя документация всего виджета)
+   DOCS WRAPPER
 ============================================================ */
 .docs-wrapper {
   margin-top: 20px;
