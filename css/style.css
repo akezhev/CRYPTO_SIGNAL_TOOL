@@ -219,7 +219,6 @@ body {
   gap: 8px;
   flex-wrap: wrap;
   margin-bottom: 20px;
-  position: relative;
 }
 
 .tf-btn {
@@ -353,9 +352,10 @@ body {
 }
 
 /* ============================================================
-   MARKET STATE WIDGET (Macro Heatmap) v2.3
+   MARKET STATE WIDGET (Macro Heatmap) v2.4
 ============================================================ */
 
+/* Слот: relative, чтобы панель позиционировалась относительно него */
 .ms-inline-slot {
   position: relative;
   margin-left: 8px;
@@ -455,12 +455,11 @@ body {
   }
 }
 
-/* -------- Dropdown wrapper: держит ms-panel + ms-docs-panel -------- */
+/* -------- Dropdown wrapper: СРАВА от компактной строки -------- */
 .ms-dropdown-wrap {
   position: absolute;
-  top: 100%;
-  left: 0;
-  margin-top: 8px;
+  top: 0;
+  left: calc(100% + 8px);
   width: 340px;
   max-width: 92vw;
   display: flex;
@@ -470,14 +469,14 @@ body {
   z-index: 1000;
   opacity: 0;
   visibility: hidden;
-  transform: translateY(-6px);
+  transform: translateX(-8px);
   transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s;
 }
 
 .ms-dropdown-wrap.ms-open {
   opacity: 1;
   visibility: visible;
-  transform: translateY(0);
+  transform: translateX(0);
   transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s;
 }
 
@@ -720,7 +719,7 @@ body {
   transform: rotate(180deg);
 }
 
-/* -------- Docs panel -------- */
+/* -------- Docs panel (под ms-panel) -------- */
 .ms-docs-panel {
   margin-top: 8px;
   max-height: 400px;
@@ -834,11 +833,17 @@ body {
   .ms-compact-label {
     display: none;
   }
+  /* На мобиле ставим панель под кнопкой, выравниваем по правому краю */
   .ms-dropdown-wrap {
     left: auto;
     right: 0;
+    top: calc(100% + 8px);
     width: calc(100vw - 40px);
     max-width: 340px;
+    transform: translateY(-6px);
+  }
+  .ms-dropdown-wrap.ms-open {
+    transform: translateY(0);
   }
   .ms-row {
     grid-template-columns: 78px 1fr 32px;
