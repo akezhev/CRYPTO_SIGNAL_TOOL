@@ -1,9 +1,9 @@
 // ============================================================
-//  МОДУЛЬ CRYPTO SIGNAL TOOL (v9.7)
+//  МОДУЛЬ CRYPTO SIGNAL TOOL (v9.8)
 //  + Fear & Greed Index
 //  + Market State Widget (Macro Heatmap)
 //  + Выпадающая документация справа под ms-panel
-//  + КОНФИГУРИРУЕМЫЕ ВЕСА ИНДИКАТОРОВ С АВТОНОРМИРОВКОЙ К 100%
+//  + TF-arrow: выпадающая карточка doc-card активного TF
 // ============================================================
 
 // ---------- Конфигурация ----------
@@ -56,31 +56,74 @@ const CONFIG = {
     intervalMs: 5 * 60 * 1000,
     neutralFallback: 50,
   },
+};
 
-  // ============================================================
-  //  НАСТРАИВАЕМЫЕ ВЕСА ИНДИКАТОРОВ
-  //  Итоговый балл автоматически нормируется к 0–100,
-  //  поэтому сумма весов может быть любой (не обязательно 100).
-  // ============================================================
-  scoring: {
-    // Максимальный вклад каждого индикатора ДО нормировки.
-    weights: {
-      rsi: 30,
-      macd: 20,
-      ema: 20,
-      cvd: 15,
-      bb: 15,
-      volume: 10,
-      poc: 5,
+// ---------- Гайды по таймфреймам (единый источник) ----------
+const TF_GUIDES = {
+  "15m": {
+    name: "15 Минут",
+    icon: "⚡",
+    action: {
+      BUY: "Скальпинг. Цель: +0.5-1.5%. Стоп: -0.5-1%.",
+      SELL: "Краткосрочный выход. Цель: +0.5-1.5%. Стоп: -0.5-1%.",
+      WAIT: "Рынок неопределён. Ждите 1H+.",
     },
-    // Внутренние "ступеньки" для градаций внутри индикатора (доли от веса)
-    gradations: {
-      rsi: { extreme: 1.0, strong: 0.66, normal: 0.5, weak: 0.16 },
-      macd: { main: 1.0, trend: 0.5 },
-      bb: { touch: 1.0, squeeze: 0.66 },
+    risk: "Высокий",
+    positionSize: "1-2%",
+    stopLoss: "0.5-1%",
+    takeProfit: "0.5-1.5%",
+  },
+  "1h": {
+    name: "1 Час",
+    icon: "📊",
+    action: {
+      BUY: "Стандартный вход. Цель: +1-3%. Стоп: -1-1.5%.",
+      SELL: "Стандартный выход. Цель: +1-3%. Стоп: -1-1.5%.",
+      WAIT: "Сигнал слабый. Ждите 2H+.",
     },
-    // Порог "активного" сигнала (в нормированных %)
-    strongThreshold: 30,
+    risk: "Средний",
+    positionSize: "3-5%",
+    stopLoss: "1-1.5%",
+    takeProfit: "1-3%",
+  },
+  "2h": {
+    name: "2 Часа",
+    icon: "📈",
+    action: {
+      BUY: "Свинг-трейдинг. Цель: +2-4%. Стоп: -1.5-2%.",
+      SELL: "Свинг-выход. Цель: +2-4%. Стоп: -1.5-2%.",
+      WAIT: "Тренд не сформирован. Ждите 4H+.",
+    },
+    risk: "Средний-Высокий",
+    positionSize: "3-5%",
+    stopLoss: "1.5-2%",
+    takeProfit: "2-4%",
+  },
+  "4h": {
+    name: "4 Часа",
+    icon: "📉",
+    action: {
+      BUY: "Среднесрочный вход. Цель: +3-6%. Стоп: -2-3%.",
+      SELL: "Среднесрочный выход. Цель: +3-6%. Стоп: -2-3%.",
+      WAIT: "Нет чёткого тренда. Ждите 1D+.",
+    },
+    risk: "Средний",
+    positionSize: "5-10%",
+    stopLoss: "2-3%",
+    takeProfit: "3-6%",
+  },
+  "1d": {
+    name: "1 День",
+    icon: "🏛️",
+    action: {
+      BUY: "Долгосрочный вход. Цель: +5-15%. Стоп: -3-5%.",
+      SELL: "Долгосрочный выход. Цель: +5-15%. Стоп: -3-5%.",
+      WAIT: "Глобальный тренд не определён.",
+    },
+    risk: "Низкий-Средний",
+    positionSize: "10-20%",
+    stopLoss: "3-5%",
+    takeProfit: "5-15%",
   },
 };
 
@@ -793,9 +836,6 @@ class SignalGenerator {
     this.indicatorCalc = indicatorCalc;
   }
 
-  // ============================================================
-  //  ГЛАВНЫЙ МЕТОД: конфигурируемые веса + автонормировка к 100
-  // ============================================================
   generate(asset, tf, candles) {
     if (!candles || candles.length < CONFIG.minCandlesRequired) {
       return this._emptySignal(asset, tf);
@@ -803,176 +843,144 @@ class SignalGenerator {
     const ind = this.indicatorCalc.calculateAll(candles, tf);
     if (!ind) return this._emptySignal(asset, tf);
 
+    let buyScore = 0,
+      sellScore = 0;
+    const scores = {};
+
+    const rsi = ind.rsi;
+    if (rsi < 10) {
+      buyScore += 30;
+      scores.rsi = 30;
+    } else if (rsi > 90) {
+      sellScore += 30;
+      scores.rsi = -30;
+    } else if (rsi < 20) {
+      buyScore += 20;
+      scores.rsi = 20;
+    } else if (rsi > 80) {
+      sellScore += 20;
+      scores.rsi = -20;
+    } else if (rsi < 30) {
+      buyScore += 15;
+      scores.rsi = 15;
+    } else if (rsi > 70) {
+      sellScore += 15;
+      scores.rsi = -15;
+    } else if (rsi < 40) {
+      buyScore += 5;
+      scores.rsi = 5;
+    } else if (rsi > 60) {
+      sellScore += 5;
+      scores.rsi = -5;
+    } else scores.rsi = 0;
+
+    const hist = ind.macdHist;
+    if (hist > 0 && ind.macdLine > ind.macdSignal) {
+      buyScore += 20;
+      scores.macd = 20;
+    } else if (hist < 0 && ind.macdLine < ind.macdSignal) {
+      sellScore += 20;
+      scores.macd = -20;
+    } else if (hist > ind.macdPrevHist) {
+      buyScore += 10;
+      scores.macd = 10;
+    } else if (hist < ind.macdPrevHist) {
+      sellScore += 10;
+      scores.macd = -10;
+    } else scores.macd = 0;
+
+    const c = ind.close;
+    if (
+      c > ind.ema8 &&
+      ind.ema8 > ind.ema13 &&
+      ind.ema13 > ind.ema21 &&
+      ind.ema21 > ind.ema50
+    ) {
+      buyScore += 20;
+      scores.ema = 20;
+    } else if (
+      c < ind.ema8 &&
+      ind.ema8 < ind.ema13 &&
+      ind.ema13 < ind.ema21 &&
+      ind.ema21 < ind.ema50
+    ) {
+      sellScore += 20;
+      scores.ema = -20;
+    } else scores.ema = 0;
+
+    if (ind.cvd > ind.cvdPrev && ind.cvd > 0) {
+      buyScore += 15;
+      scores.cvd = 15;
+    } else if (ind.cvd < ind.cvdPrev && ind.cvd < 0) {
+      sellScore += 15;
+      scores.cvd = -15;
+    } else scores.cvd = 0;
+
+    if (c < ind.bbLower) {
+      buyScore += 15;
+      scores.bb = 15;
+    } else if (c > ind.bbUpper) {
+      sellScore += 15;
+      scores.bb = -15;
+    } else if (ind.bbWidth < 0.1 && c > ind.bbMiddle) {
+      buyScore += 10;
+      scores.bb = 10;
+    } else if (ind.bbWidth < 0.1 && c < ind.bbMiddle) {
+      sellScore += 10;
+      scores.bb = -10;
+    } else scores.bb = 0;
+
+    const volRatio = ind.volume / ind.volAvg;
+    if (volRatio > 1.5 && c > ind.ema8) {
+      buyScore += 10;
+      scores.volume = 10;
+    } else if (volRatio > 1.5 && c < ind.ema8) {
+      sellScore += 10;
+      scores.volume = -10;
+    } else scores.volume = 0;
+
+    const pocDist = Math.abs(c - ind.poc) / ind.atr;
+    if (pocDist < 0.2 && c > ind.ema8) {
+      buyScore += 5;
+      scores.poc = 5;
+    } else if (pocDist < 0.2 && c < ind.ema8) {
+      sellScore += 5;
+      scores.poc = -5;
+    } else scores.poc = 0;
+
+    const netScore = buyScore - sellScore;
+    const confidence = utils.clamp(Math.abs(netScore), 0, 100);
     const cfg = CONFIG.trading;
-    const sc = CONFIG.scoring;
-    const W = sc.weights;
-    const G = sc.gradations;
-
-    // Сумма весов для нормировки (динамическая — меняешь weights, нормировка подстроится)
-    const totalWeight = Object.values(W).reduce((s, v) => s + v, 0) || 1;
-
-    // Накопители "сырых" баллов (в единицах весов)
-    let buyRaw = 0;
-    let sellRaw = 0;
-    const scores = {}; // нормированные вклады (в % от totalWeight)
-
-    // ---------- 1. RSI ----------
-    {
-      const rsi = ind.rsi;
-      const w = W.rsi;
-      const g = G.rsi;
-      let raw = 0;
-      if (rsi < 10) raw = w * g.extreme;
-      else if (rsi > 90) raw = -w * g.extreme;
-      else if (rsi < 20) raw = w * g.strong;
-      else if (rsi > 80) raw = -w * g.strong;
-      else if (rsi < 30) raw = w * g.normal;
-      else if (rsi > 70) raw = -w * g.normal;
-      else if (rsi < 40) raw = w * g.weak;
-      else if (rsi > 60) raw = -w * g.weak;
-      if (raw > 0) buyRaw += raw;
-      else sellRaw += -raw;
-      scores.rsi = (raw / totalWeight) * 100;
-    }
-
-    // ---------- 2. MACD ----------
-    {
-      const w = W.macd;
-      const g = G.macd;
-      const hist = ind.macdHist;
-      let raw = 0;
-      if (hist > 0 && ind.macdLine > ind.macdSignal) raw = w * g.main;
-      else if (hist < 0 && ind.macdLine < ind.macdSignal) raw = -w * g.main;
-      else if (hist > ind.macdPrevHist) raw = w * g.trend;
-      else if (hist < ind.macdPrevHist) raw = -w * g.trend;
-      if (raw > 0) buyRaw += raw;
-      else sellRaw += -raw;
-      scores.macd = (raw / totalWeight) * 100;
-    }
-
-    // ---------- 3. EMA Ribbon ----------
-    {
-      const w = W.ema;
-      const c = ind.close;
-      let raw = 0;
-      if (
-        c > ind.ema8 &&
-        ind.ema8 > ind.ema13 &&
-        ind.ema13 > ind.ema21 &&
-        ind.ema21 > ind.ema50
-      ) {
-        raw = w;
-      } else if (
-        c < ind.ema8 &&
-        ind.ema8 < ind.ema13 &&
-        ind.ema13 < ind.ema21 &&
-        ind.ema21 < ind.ema50
-      ) {
-        raw = -w;
-      }
-      if (raw > 0) buyRaw += raw;
-      else sellRaw += -raw;
-      scores.ema = (raw / totalWeight) * 100;
-    }
-
-    // ---------- 4. CVD ----------
-    {
-      const w = W.cvd;
-      let raw = 0;
-      if (ind.cvd > ind.cvdPrev && ind.cvd > 0) raw = w;
-      else if (ind.cvd < ind.cvdPrev && ind.cvd < 0) raw = -w;
-      if (raw > 0) buyRaw += raw;
-      else sellRaw += -raw;
-      scores.cvd = (raw / totalWeight) * 100;
-    }
-
-    // ---------- 5. Bollinger Bands ----------
-    {
-      const w = W.bb;
-      const g = G.bb;
-      const c = ind.close;
-      let raw = 0;
-      if (c < ind.bbLower) raw = w * g.touch;
-      else if (c > ind.bbUpper) raw = -w * g.touch;
-      else if (ind.bbWidth < 0.1 && c > ind.bbMiddle) raw = w * g.squeeze;
-      else if (ind.bbWidth < 0.1 && c < ind.bbMiddle) raw = -w * g.squeeze;
-      if (raw > 0) buyRaw += raw;
-      else sellRaw += -raw;
-      scores.bb = (raw / totalWeight) * 100;
-    }
-
-    // ---------- 6. Volume Spike ----------
-    {
-      const w = W.volume;
-      const c = ind.close;
-      const volRatio = ind.volume / (ind.volAvg || 1);
-      let raw = 0;
-      if (volRatio > 1.5 && c > ind.ema8) raw = w;
-      else if (volRatio > 1.5 && c < ind.ema8) raw = -w;
-      if (raw > 0) buyRaw += raw;
-      else sellRaw += -raw;
-      scores.volume = (raw / totalWeight) * 100;
-    }
-
-    // ---------- 7. POC ----------
-    {
-      const w = W.poc;
-      const c = ind.close;
-      const atr = ind.atr || 0.01;
-      const pocDist = Math.abs(c - ind.poc) / atr;
-      let raw = 0;
-      if (pocDist < 0.2 && c > ind.ema8) raw = w;
-      else if (pocDist < 0.2 && c < ind.ema8) raw = -w;
-      if (raw > 0) buyRaw += raw;
-      else sellRaw += -raw;
-      scores.poc = (raw / totalWeight) * 100;
-    }
-
-    // ---------- Итоговая нормировка к 100 ----------
-    const netRaw = buyRaw - sellRaw; // диапазон [-totalWeight, +totalWeight]
-    const netScore = (netRaw / totalWeight) * 100; // → [-100, +100]
-    const confidence = Math.round(utils.clamp(Math.abs(netScore), 0, 100));
-
-    // Округление вкладов индикаторов для UI
-    const scoresPct = {};
-    for (const k of Object.keys(scores)) {
-      scoresPct[k] = Math.round(scores[k] * 10) / 10;
-    }
-
-    // ---------- Направление и подтверждения ----------
     const buyAligned = this._isEntryAligned(ind, "BUY");
     const sellAligned = this._isEntryAligned(ind, "SELL");
     const htfBuy = this._htfConfirms(tf, candles, "BUY");
     const htfSell = this._htfConfirms(tf, candles, "SELL");
 
     let scoreDirection = "NEUTRAL";
-    if (netScore > sc.strongThreshold && ind.trendStrength > -1)
-      scoreDirection = "BUY";
-    else if (netScore < -sc.strongThreshold && ind.trendStrength < 1)
-      scoreDirection = "SELL";
+    if (netScore > 30 && ind.trendStrength > -1) scoreDirection = "BUY";
+    else if (netScore < -30 && ind.trendStrength < 1) scoreDirection = "SELL";
 
     let direction = "NEUTRAL";
     if (
       buyAligned &&
       htfBuy &&
       confidence >= cfg.minConfidence &&
-      netScore > sc.strongThreshold
+      netScore > 30
     )
       direction = "BUY";
     else if (
       sellAligned &&
       htfSell &&
       confidence >= cfg.minConfidence &&
-      netScore < -sc.strongThreshold
+      netScore < -30
     )
       direction = "SELL";
 
     const actionProbs = this._calcActionProbs(
-      buyRaw,
-      sellRaw,
+      buyScore,
+      sellScore,
       ind.trendStrength,
-      ind.bbWidth,
-      totalWeight
+      ind.bbWidth
     );
 
     return {
@@ -980,7 +988,7 @@ class SignalGenerator {
       timeframe: tf,
       direction,
       scoreDirection,
-      confidence,
+      confidence: Math.round(confidence),
       price: ind.close,
       atr: ind.atr,
       htfTimeframe: this._htfFor(tf),
@@ -997,7 +1005,7 @@ class SignalGenerator {
         trendStrength: ind.trendStrength.toFixed(2),
       },
       actionProbabilities: actionProbs,
-      indicatorScores: scoresPct, // нормированные вклады для UI
+      indicatorScores: scores,
       status: "Активен",
     };
   }
@@ -1054,12 +1062,9 @@ class SignalGenerator {
     return agg;
   }
 
-  // Нормированная версия: принимает сырые buyRaw/sellRaw и totalWeight
-  _calcActionProbs(buyRaw, sellRaw, trendStrength, bbWidth, totalWeight) {
-    const denom = totalWeight || 1;
-    let buyProb = Math.min((buyRaw / denom) * 100, 100);
-    let sellProb = Math.min((sellRaw / denom) * 100, 100);
-
+  _calcActionProbs(buyScore, sellScore, trendStrength, bbWidth) {
+    let buyProb = Math.min((buyScore / 100) * 100, 100);
+    let sellProb = Math.min((sellScore / 100) * 100, 100);
     if (bbWidth < 0.05) {
       buyProb *= 0.7;
       sellProb *= 0.7;
@@ -1485,7 +1490,7 @@ class FearGreedManager {
 }
 
 // ============================================================
-//  MARKET STATE WIDGET (Macro Heatmap) v2.4
+//  MARKET STATE WIDGET (Macro Heatmap) v2.5
 // ============================================================
 class MarketStateWidget {
   static CONFIG = {
@@ -2091,6 +2096,103 @@ class MarketStateWidget {
   }
 }
 
+// ============================================================
+//  TF GUIDE PANEL (◂ выпадающая панель с doc-card активного TF)
+// ============================================================
+class TFGuidePanel {
+  constructor() {
+    this._isOpen = false;
+    this._el = {
+      trigger: null,
+      wrap: null,
+      body: null,
+      arrow: null,
+    };
+    this._currentTF = CONFIG.defaultTF;
+
+    this._onDocClick = (e) => {
+      if (!this._isOpen) return;
+      if (
+        this._el.wrap &&
+        !this._el.wrap.contains(e.target) &&
+        !this._el.trigger?.contains(e.target)
+      ) {
+        this.close();
+      }
+    };
+    this._onKeyDown = (e) => {
+      if (e.key === "Escape" && this._isOpen) this.close();
+    };
+  }
+
+  init() {
+    this._el.trigger = document.querySelector(".tf-arrow");
+    this._el.wrap = document.getElementById("tf-guide-panel");
+    this._el.body = document.getElementById("tf-guide-body");
+    this._el.arrow = document.querySelector(".tf-arrow");
+
+    if (!this._el.trigger || !this._el.wrap || !this._el.body) {
+      console.warn("⚠️ TFGuidePanel: элементы не найдены в DOM");
+      return;
+    }
+
+    this._renderCard(this._currentTF);
+
+    this._el.trigger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.toggle();
+    });
+
+    document.addEventListener("click", this._onDocClick);
+    document.addEventListener("keydown", this._onKeyDown);
+  }
+
+  destroy() {
+    document.removeEventListener("click", this._onDocClick);
+    document.removeEventListener("keydown", this._onKeyDown);
+  }
+
+  setTF(tf) {
+    this._currentTF = tf;
+    this._renderCard(tf);
+  }
+
+  toggle() {
+    this._isOpen ? this.close() : this.open();
+  }
+
+  open() {
+    this._isOpen = true;
+    this._el.wrap?.classList.add("ms-open");
+    this._el.arrow?.classList.add("active");
+  }
+
+  close() {
+    this._isOpen = false;
+    this._el.wrap?.classList.remove("ms-open");
+    this._el.arrow?.classList.remove("active");
+  }
+
+  _renderCard(tf) {
+    const guide = TF_GUIDES[tf];
+    if (!guide || !this._el.body) return;
+    this._el.body.innerHTML = `
+      <div class="doc-card" data-tf="${tf}">
+        <div class="tf-name">${guide.icon} ${guide.name}</div>
+        <div style="margin:4px 0; font-size:11px;"><span class="action-buy">📈 BUY:</span> ${guide.action.BUY}</div>
+        <div style="margin:4px 0; font-size:11px;"><span class="action-sell">📉 SELL:</span> ${guide.action.SELL}</div>
+        <div style="margin:4px 0; font-size:11px;"><span class="action-wait">⏸️ WAIT:</span> ${guide.action.WAIT}</div>
+        <div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.05);">
+          <div><span class="risk-label">Риск:</span> <span class="risk-value">${guide.risk}</span></div>
+          <div><span class="risk-label">Размер:</span> <span class="risk-value">${guide.positionSize}</span></div>
+          <div><span class="risk-label">Стоп:</span> <span class="risk-value" style="color:#f87171;">${guide.stopLoss}</span></div>
+          <div><span class="risk-label">Профит:</span> <span class="risk-value" style="color:#34d399;">${guide.takeProfit}</span></div>
+        </div>
+      </div>
+    `;
+  }
+}
+
 // ---------- Рендерер UI ----------
 class UIRenderer {
   constructor(containerId) {
@@ -2109,6 +2211,7 @@ class UIRenderer {
       winRate: 0,
     };
     this._lastSignalKey = {};
+    this.tfGuide = new TFGuidePanel();
   }
 
   setSoundManager(sm) {
@@ -2120,6 +2223,7 @@ class UIRenderer {
     this.container.innerHTML = html;
     this._cacheElements();
     this._bindEvents();
+    this.tfGuide.init();
     return this;
   }
 
@@ -2184,7 +2288,7 @@ class UIRenderer {
                 <div class="widget-header">
                     <div>
                         <span class="widget-title">⚛ CRYPTO SIGNAL TOOL ⚛</span>
-                        <span class="widget-version">v9.7 • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin) •</span>
+                        <span class="widget-version">v9.8 • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin) •</span>
                     </div>
                     <div class="widget-status-group">
                         <div class="sound-controls">
@@ -2204,6 +2308,15 @@ class UIRenderer {
                 </div>
 
                 <div class="tf-group" id="tf-group">
+                    <div class="tf-arrow-wrap">
+                        <button class="tf-arrow" type="button" data-tf="◂">◂</button>
+                        <div class="tf-guide-panel" id="tf-guide-panel">
+                            <div class="tf-guide-panel-header">
+                                <span>📖 ГАЙД ТАЙМФРЕЙМА</span>
+                            </div>
+                            <div class="tf-guide-panel-body" id="tf-guide-body"></div>
+                        </div>
+                    </div>
                     ${CONFIG.timeframes
                       .map(
                         (tf) =>
@@ -2276,73 +2389,7 @@ class UIRenderer {
             <div class="doc-grid">
                 ${CONFIG.timeframes
                   .map((tf) => {
-                    const guide = {
-                      "15m": {
-                        name: "15 Минут",
-                        icon: "⚡",
-                        action: {
-                          BUY: "Скальпинг. Цель: +0.5-1.5%. Стоп: -0.5-1%.",
-                          SELL: "Краткосрочный выход. Цель: +0.5-1.5%. Стоп: -0.5-1%.",
-                          WAIT: "Рынок неопределён. Ждите 1H+.",
-                        },
-                        risk: "Высокий",
-                        positionSize: "1-2%",
-                        stopLoss: "0.5-1%",
-                        takeProfit: "0.5-1.5%",
-                      },
-                      "1h": {
-                        name: "1 Час",
-                        icon: "📊",
-                        action: {
-                          BUY: "Стандартный вход. Цель: +1-3%. Стоп: -1-1.5%.",
-                          SELL: "Стандартный выход. Цель: +1-3%. Стоп: -1-1.5%.",
-                          WAIT: "Сигнал слабый. Ждите 2H+.",
-                        },
-                        risk: "Средний",
-                        positionSize: "3-5%",
-                        stopLoss: "1-1.5%",
-                        takeProfit: "1-3%",
-                      },
-                      "2h": {
-                        name: "2 Часа",
-                        icon: "📈",
-                        action: {
-                          BUY: "Свинг-трейдинг. Цель: +2-4%. Стоп: -1.5-2%.",
-                          SELL: "Свинг-выход. Цель: +2-4%. Стоп: -1.5-2%.",
-                          WAIT: "Тренд не сформирован. Ждите 4H+.",
-                        },
-                        risk: "Средний-Высокий",
-                        positionSize: "3-5%",
-                        stopLoss: "1.5-2%",
-                        takeProfit: "2-4%",
-                      },
-                      "4h": {
-                        name: "4 Часа",
-                        icon: "📉",
-                        action: {
-                          BUY: "Среднесрочный вход. Цель: +3-6%. Стоп: -2-3%.",
-                          SELL: "Среднесрочный выход. Цель: +3-6%. Стоп: -2-3%.",
-                          WAIT: "Нет чёткого тренда. Ждите 1D+.",
-                        },
-                        risk: "Средний",
-                        positionSize: "5-10%",
-                        stopLoss: "2-3%",
-                        takeProfit: "3-6%",
-                      },
-                      "1d": {
-                        name: "1 День",
-                        icon: "🏛️",
-                        action: {
-                          BUY: "Долгосрочный вход. Цель: +5-15%. Стоп: -3-5%.",
-                          SELL: "Долгосрочный выход. Цель: +5-15%. Стоп: -3-5%.",
-                          WAIT: "Глобальный тренд не определён.",
-                        },
-                        risk: "Низкий-Средний",
-                        positionSize: "10-20%",
-                        stopLoss: "3-5%",
-                        takeProfit: "5-15%",
-                      },
-                    }[tf];
+                    const guide = TF_GUIDES[tf];
                     if (!guide) return "";
                     return `
                         <div class="doc-card" data-tf="${tf}">
@@ -2383,13 +2430,13 @@ class UIRenderer {
             <span>Данное приложение — это мощный инструмент для принятия торговых решений, но не гарантия прибыли. Это профессиональный торговый терминал для криптовалют, который объединяет 7 лучших технических индикаторов в единую систему генерации сигналов. Приложение работает в реальном времени, анализируя данные с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin)</span>
             <br><br>
             <span>🧠 РАСШИФРОВКА 7 ИНДИКАТОРОВ<br>
-              1. RSI — перекупленность/перепроданность, базовый вес 30%<br>
-              2. MACD — пересечение сигнальной и основной линии, базовый вес 20%<br>
-              3. EMA Ribbon — пересечение средних, базовый вес 20%<br>
-              4. CVD — цена закрытия выше/ниже предыдущего закрытия, базовый вес 15%<br>
-              5. Bollinger Bands — пересечение верхней и нижней границ, базовый вес 15%<br>
-              6. Volume Spike — резкое увеличение объема, базовый вес 10%<br>
-              7. POC — точка разворота, базовый вес 5%<br>
+              1. RSI — Вес 15%<br>
+              2. MACD — Вес 20%<br>
+              3. EMA Ribbon — Вес 20%<br>
+              4. CVD — Вес 15%<br>
+              5. Bollinger Bands — Вес 15%<br>
+              6. Volume Spike — Вес 10%<br>
+              7. POC — Вес 5%<br>
             </span>
             <br>
             <span>
@@ -2482,6 +2529,8 @@ class UIRenderer {
           .forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
         this.currentTF = btn.dataset.tf;
+        // обновляем карточку в выпадающей панели
+        this.tfGuide.setTF(this.currentTF);
         if (this.onTFChange) this.onTFChange(this.currentTF);
       });
     }
@@ -3022,6 +3071,7 @@ class App {
     if (this._signalThrottle) clearTimeout(this._signalThrottle);
     if (this.fng) this.fng.stop();
     if (this.marketState) this.marketState.stop();
+    if (this.ui?.tfGuide) this.ui.tfGuide.destroy();
     this.sound.clearAll();
     console.log("🧹 Приложение уничтожено");
   }

@@ -247,6 +247,124 @@ body {
 }
 
 /* ============================================================
+   TF ARROW + GUIDE PANEL
+============================================================ */
+.tf-arrow-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tf-arrow {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: background 0.2s ease;
+  font-family: inherit;
+}
+
+.tf-arrow:hover {
+  background: rgba(66, 179, 250, 0.12);
+}
+
+.tf-arrow {
+  font-size: 12px;
+  color: rgb(66, 179, 250);
+  transition: transform 0.25s ease, background 0.2s ease;
+  margin: 0 2px;
+}
+.tf-arrow.active {
+  transform: rotate(180deg);
+}
+
+/* Выпадающая панель слева от ◂ */
+.tf-guide-panel {
+  position: absolute;
+  top: 0;
+  right: calc(100% + 8px);
+  width: 260px;
+  max-width: 92vw;
+  padding: 10px 12px;
+  background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
+  border: 1px solid rgb(66, 179, 250);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.03);
+  color: #e2e8f0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(8px) scale(0.98);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s;
+}
+
+.tf-guide-panel.ms-open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0) scale(1);
+  pointer-events: auto;
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s;
+}
+
+.tf-guide-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #cbd5e1;
+  text-transform: uppercase;
+}
+
+.tf-guide-panel-body {
+  font-size: 11px;
+}
+
+.tf-guide-panel-body .doc-card {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tf-guide-panel-body .tf-name {
+  font-weight: 600;
+  color: #60a5fa;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+.tf-guide-panel-body .action-buy {
+  color: #34d399;
+  font-weight: 600;
+}
+.tf-guide-panel-body .action-sell {
+  color: #f87171;
+  font-weight: 600;
+}
+.tf-guide-panel-body .action-wait {
+  color: #94a3b8;
+  font-weight: 600;
+}
+.tf-guide-panel-body .risk-label {
+  color: #64748b;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.tf-guide-panel-body .risk-value {
+  color: #e2e8f0;
+  font-weight: 500;
+}
+
+/* ============================================================
    SIGNAL COUNT
 ============================================================ */
 .signal-count-item {
@@ -352,10 +470,8 @@ body {
 }
 
 /* ============================================================
-   MARKET STATE WIDGET (Macro Heatmap) v2.4
+   MARKET STATE WIDGET
 ============================================================ */
-
-/* Слот: relative, чтобы панель позиционировалась относительно него */
 .ms-inline-slot {
   position: relative;
   margin-left: 8px;
@@ -372,7 +488,6 @@ body {
   position: relative;
 }
 
-/* -------- Compact -------- */
 .ms-compact {
   display: inline-flex;
   align-items: center;
@@ -455,7 +570,6 @@ body {
   }
 }
 
-/* -------- Dropdown wrapper: СРАВА от компактной строки -------- */
 .ms-dropdown-wrap {
   position: absolute;
   top: 0;
@@ -487,7 +601,6 @@ body {
   box-sizing: border-box;
 }
 
-/* -------- Panel -------- */
 .ms-panel {
   padding: 12px 14px;
   background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
@@ -719,7 +832,6 @@ body {
   transform: rotate(180deg);
 }
 
-/* -------- Docs panel (под ms-panel) -------- */
 .ms-docs-panel {
   margin-top: 8px;
   max-height: 400px;
@@ -833,7 +945,6 @@ body {
   .ms-compact-label {
     display: none;
   }
-  /* На мобиле ставим панель под кнопкой, выравниваем по правому краю */
   .ms-dropdown-wrap {
     left: auto;
     right: 0;
@@ -848,6 +959,18 @@ body {
   .ms-row {
     grid-template-columns: 78px 1fr 32px;
     font-size: 10px;
+  }
+  /* TF-arrow на мобильных */
+  .tf-guide-panel {
+    right: auto;
+    left: 0;
+    top: calc(100% + 8px);
+    width: calc(100vw - 40px);
+    max-width: 280px;
+    transform: translateY(-6px);
+  }
+  .tf-guide-panel.ms-open {
+    transform: translateY(0);
   }
 }
 
