@@ -1,9 +1,10 @@
 // ============================================================
-//  МОДУЛЬ CRYPTO SIGNAL TOOL (v9.8)
+//  МОДУЛЬ CRYPTO SIGNAL TOOL (v9.9)
 //  + Fear & Greed Index
 //  + Market State Widget (Macro Heatmap)
 //  + Выпадающая документация справа под ms-panel
 //  + TF-arrow: выпадающая карточка doc-card активного TF
+//  + Исправлена шкала _scoreLabel (5 категорий по документации)
 // ============================================================
 
 // ---------- Конфигурация ----------
@@ -58,7 +59,52 @@ const CONFIG = {
   },
 };
 
-// ---------- Гайды по таймфреймам (единый источник) ----------
+// ---------- Единая шкала Macro Score ----------
+// Используется и в ms-panel (label), и в документации — чтобы не было расхождений.
+const MACRO_SCALE = [
+  {
+    min: 75,
+    max: 100,
+    label: "Очень здоровый",
+    short: "Очень здоровый",
+    color: "#22c55e",
+    barClass: "ms-green",
+  },
+  {
+    min: 55,
+    max: 74,
+    label: "Здоровый",
+    short: "Здоровый",
+    color: "#eab308",
+    barClass: "ms-yellow",
+  },
+  {
+    min: 40,
+    max: 54,
+    label: "Осторожно",
+    short: "Осторожно",
+    color: "#f97316",
+    barClass: "ms-orange",
+  },
+  {
+    min: 20,
+    max: 39,
+    label: "Риск",
+    short: "Риск",
+    color: "#ef4444",
+    barClass: "ms-red",
+  },
+  {
+    min: 0,
+    max: 19,
+    label: "Экстрим",
+    short: "Экстрим",
+    color: "#ef4444",
+    barClass: "ms-red",
+  },
+];
+
+// ---------- Гайды по таймфреймам ----------
 const TF_GUIDES = {
   "15m": {
     name: "15 Минут",
@@ -1490,7 +1536,8 @@ class FearGreedManager {
 }
 
 // ============================================================
-//  MARKET STATE WIDGET (Macro Heatmap) v2.5
+//  MARKET STATE WIDGET (Macro Heatmap) v2.6
+//  + Исправлена шкала _scoreLabel — 5 категорий по документации
 // ============================================================
 class MarketStateWidget {
   static CONFIG = {
@@ -1801,25 +1848,24 @@ class MarketStateWidget {
     }
   }
 
+  // Возвращает объект из MACRO_SCALE по значению 0..100
+  _scaleInfo(v) {
+    const x = utils.clamp(Math.round(v), 0, 100);
+    for (const s of MACRO_SCALE) {
+      if (x >= s.min && x <= s.max) return s;
+    }
+    // fallback — на всякий случай
+    return MACRO_SCALE[MACRO_SCALE.length - 1];
+  }
+
   _scoreClass(v) {
-    if (v >= 75) return "ms-green";
-    if (v >= 55) return "ms-yellow";
-    if (v >= 40) return "ms-orange";
-    return "ms-red";
+    return this._scaleInfo(v).barClass;
   }
   _scoreColor(v) {
-    if (v >= 75) return "#22c55e";
-    if (v >= 55) return "#eab308";
-    if (v >= 40) return "#f97316";
-    return "#ef4444";
+    return this._scaleInfo(v).color;
   }
   _scoreLabel(v) {
-    if (v >= 80) return "Очень здоровый";
-    if (v >= 65) return "Здоровый";
-    if (v >= 50) return "Нейтральный";
-    if (v >= 35) return "Осторожно";
-    if (v >= 20) return "Риск";
-    return "Экстрим";
+    return this._scaleInfo(v).label;
   }
 
   _buildDocsHtml() {
@@ -1914,14 +1960,13 @@ class MarketStateWidget {
 
   _render(data) {
     const s = data.scores;
+    const macroInfo = this._scaleInfo(s.macro);
 
     const compactHtml = `
       <div class="ms-compact" title="Состояние рынка — Macro Heatmap">
         <span class="ms-compact-dot" id="ms-status-dot"></span>
         <span class="ms-compact-label">СОСТОЯНИЕ РЫНКА</span>
-        <span class="ms-compact-value" style="color:${this._scoreColor(
-          s.macro
-        )};">${s.macro}</span>
+        <span class="ms-compact-value" style="color:${macroInfo.color};">${s.macro}</span>
         <span class="ms-compact-arrow">▶</span>
       </div>
     `;
@@ -1964,12 +2009,10 @@ class MarketStateWidget {
           <div class="ms-panel-header">
             <div class="ms-panel-title">Состояние рынка</div>
             <div class="ms-panel-macro">
-              <span class="ms-panel-macro-value" style="color:${this._scoreColor(
-                s.macro
-              )};">${s.macro}</span>
-              <span class="ms-panel-macro-label">${this._scoreLabel(
-                s.macro
-              )}</span>
+              <span class="ms-panel-macro-value" style="color:${
+                macroInfo.color
+              };">${s.macro}</span>
+              <span class="ms-panel-macro-label">${macroInfo.label}</span>
             </div>
           </div>
 
@@ -2288,7 +2331,7 @@ class UIRenderer {
                 <div class="widget-header">
                     <div>
                         <span class="widget-title">⚛ CRYPTO SIGNAL TOOL ⚛</span>
-                        <span class="widget-version">v9.8 • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin) •</span>
+                        <span class="widget-version">v9.9 • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin) •</span>
                     </div>
                     <div class="widget-status-group">
                         <div class="sound-controls">
@@ -2529,7 +2572,6 @@ class UIRenderer {
           .forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
         this.currentTF = btn.dataset.tf;
-        // обновляем карточку в выпадающей панели
         this.tfGuide.setTF(this.currentTF);
         if (this.onTFChange) this.onTFChange(this.currentTF);
       });
