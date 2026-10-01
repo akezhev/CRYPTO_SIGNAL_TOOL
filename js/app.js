@@ -1780,7 +1780,7 @@ class MarketStateWidget {
         <span class="ms-compact-value" style="color:${this._scoreColor(
           s.macro
         )};">${s.macro}</span>
-        <span class="ms-compact-arrow">▼</span>
+        <span class="ms-compact-arrow">▶</span>
       </div>
     `;
 
