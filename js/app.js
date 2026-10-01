@@ -20,7 +20,7 @@ const CONFIG = {
     TRX: "TRXUSDT",
     PAXG: "PAXGUSDT",
   },
-  timeframes: ["◂", "15m", "1h", "2h", "4h", "1d"],
+  timeframes: ["15m", "1h", "2h", "4h", "1d"],
   tfMinutes: { "15m": 15, "1h": 60, "2h": 120, "4h": 240, "1d": 1440 },
   defaultTF: "1h",
   wsEndpoint: "wss://stream.binance.com:9443/ws",
