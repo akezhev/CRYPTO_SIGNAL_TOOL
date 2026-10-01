@@ -402,7 +402,7 @@ body {
 
 .ms-compact.ms-open {
   background: rgba(96, 165, 250, 0.12);
-  border-color: rgba(96, 165, 250, 0.4);
+  border-color: rgb(85, 178, 236);
 }
 
 .ms-compact-label {
