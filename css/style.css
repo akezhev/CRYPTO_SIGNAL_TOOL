@@ -355,8 +355,8 @@ body {
 }
 
 /* ============================================================
-   MARKET STATE WIDGET (Macro Heatmap) v2.0
-   Компактный inline + выпадающая панель деталей
+   MARKET STATE WIDGET (Macro Heatmap) v2.1
+   Компактный inline + выпадающая панель + документация
 ============================================================ */
 
 /* ---------- Inline-слот в строке .tf-group ---------- */
@@ -369,8 +369,7 @@ body {
   z-index: 100;
 }
 
-/* ---------- Компактная строка (высота = F&G = 20px) ---------- */
-
+/* ---------- Компактная строка ---------- */
 #market-state-widget {
   display: flex;
   align-items: center;
@@ -430,7 +429,6 @@ body {
   transform: rotate(180deg);
 }
 
-/* Точка статуса внутри компактной строки */
 .ms-compact-dot {
   width: 5px;
   height: 5px;
@@ -462,9 +460,9 @@ body {
 /* ---------- Выпадающая панель ---------- */
 .ms-panel {
   position: absolute;
-  top: 0; /* выравниваем по верхнему краю строки */
-  left: calc(100% + 8px); /* справа от компактной строки, с отступом 8px */
-  right: auto; /* отключаем прижатие вправо */
+  top: 0;
+  left: calc(100% + 8px);
+  right: auto;
   width: 340px;
   max-width: 92vw;
   padding: 12px 14px;
@@ -477,7 +475,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   box-sizing: border-box;
   opacity: 0;
-  transform: translateX(-8px) scale(0.98); /* ← сдвиг влево для анимации «вправо» */
+  transform: translateX(-8px) scale(0.98);
   pointer-events: none;
   transition: opacity 0.2s ease, transform 0.2s ease;
   z-index: 1000;
@@ -485,7 +483,7 @@ body {
 
 .ms-panel.ms-open {
   opacity: 1;
-  transform: translateX(0) scale(1); /* ← панель «выезжает» вправо */
+  transform: translateX(0) scale(1);
   pointer-events: auto;
 }
 
@@ -493,7 +491,6 @@ body {
   box-sizing: border-box;
 }
 
-/* Заголовок панели */
 .ms-panel-header {
   display: flex;
   align-items: center;
@@ -543,7 +540,6 @@ body {
   letter-spacing: 0.04em;
 }
 
-/* Heatmap bars */
 .ms-heatmap {
   display: flex;
   flex-direction: column;
@@ -604,7 +600,6 @@ body {
   color: #e2e8f0;
 }
 
-/* Sub-metrics grid */
 .ms-details {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -634,7 +629,6 @@ body {
   color: #f87171;
 }
 
-/* Футер панели */
 .ms-panel-footer {
   display: flex;
   justify-content: space-between;
@@ -644,6 +638,8 @@ body {
   border-top: 1px solid rgba(148, 163, 184, 0.12);
   font-size: 9px;
   color: #64748b;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .ms-panel-update {
@@ -669,7 +665,8 @@ body {
   box-shadow: 0 0 5px #ef4444;
 }
 
-.ms-refresh-btn {
+.ms-refresh-btn,
+.ms-docs-btn {
   background: transparent;
   border: 1px solid rgba(148, 163, 184, 0.25);
   color: #94a3b8;
@@ -679,11 +676,139 @@ body {
   cursor: pointer;
   transition: all 0.2s;
   font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.ms-refresh-btn:hover {
+.ms-refresh-btn:hover,
+.ms-docs-btn:hover {
   background: rgba(148, 163, 184, 0.15);
   color: #e2e8f0;
+}
+
+.ms-docs-btn {
+  border-color: rgba(96, 165, 250, 0.4);
+  color: #60a5fa;
+}
+
+.ms-docs-btn:hover {
+  background: rgba(96, 165, 250, 0.15);
+  color: #93c5fd;
+}
+
+/* ---------- Выпадающая документация ---------- */
+.ms-docs-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 340px;
+  max-width: 92vw;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 12px 14px;
+  background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
+  border: 1px solid rgb(66, 179, 250);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.03);
+  color: #e2e8f0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  box-sizing: border-box;
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 1001;
+}
+
+.ms-docs-panel.ms-open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.ms-docs-panel * {
+  box-sizing: border-box;
+}
+
+.ms-docs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #cbd5e1;
+  text-transform: uppercase;
+}
+
+.ms-docs-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 4px;
+  border-radius: 4px;
+  transition: background 0.2s;
+  font-family: inherit;
+}
+
+.ms-docs-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+}
+
+.ms-docs-content {
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: #cbd5e1;
+}
+
+.ms-docs-content h3 {
+  font-size: 13px;
+  margin: 0 0 6px 0;
+  color: #e2e8f0;
+}
+
+.ms-docs-content h4 {
+  font-size: 11px;
+  margin: 10px 0 4px 0;
+  color: #93c5fd;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ms-docs-content p {
+  margin: 0 0 6px 0;
+}
+
+.ms-docs-content ul {
+  margin: 0 0 6px 0;
+  padding-left: 16px;
+}
+
+.ms-docs-content li {
+  margin-bottom: 2px;
+}
+
+.ms-docs-content strong {
+  color: #e2e8f0;
+}
+
+.ms-docs-content::-webkit-scrollbar {
+  width: 4px;
+}
+.ms-docs-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+}
+.ms-docs-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
 }
 
 /* Адаптив Market State */
@@ -694,6 +819,9 @@ body {
   .ms-panel {
     width: 320px;
   }
+  .ms-docs-panel {
+    width: 320px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -701,16 +829,22 @@ body {
     display: none;
   }
   .ms-panel {
-    /* на мобиле справа места нет — раскрываем влево, чтобы не выйти за экран */
     left: auto;
     right: 0;
-    top: calc(100% + 8px); /* и под строкой, а не справа */
+    top: calc(100% + 8px);
     width: calc(100vw - 40px);
     max-width: 340px;
     transform: translateY(-6px) scale(0.98);
   }
   .ms-panel.ms-open {
     transform: translateY(0) scale(1);
+  }
+  .ms-docs-panel {
+    left: 0;
+    right: auto;
+    top: calc(100% + 8px);
+    width: calc(100vw - 40px);
+    max-width: 340px;
   }
   .ms-row {
     grid-template-columns: 78px 1fr 32px;
@@ -746,9 +880,6 @@ body {
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
 }
 
-/* ============================================================
-   МЕРЦАЮЩАЯ ОБВОДКА — ТОЛЩЕ И ЯРЧЕ
-============================================================ */
 @keyframes glow-border-green-60 {
   0% {
     border-color: rgba(52, 211, 153, 0.2);
