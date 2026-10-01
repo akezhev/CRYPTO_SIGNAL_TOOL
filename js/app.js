@@ -1742,7 +1742,7 @@ class MarketStateWidget {
         <span class="ms-compact-dot ms-loading"></span
         <span class="ms-compact-label">СОСТОЯНИЕ РЫНКА</span>
         <span class="ms-compact-value" style="color:#94a3b8;">--</span>
-        <span class="ms-compact-arrow">▼</span>
+        <span class="ms-compact-arrow">▶</span>
       </div>
       <div class="ms-panel">
         <div class="ms-panel-header">

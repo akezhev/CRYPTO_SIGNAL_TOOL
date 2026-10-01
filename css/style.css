@@ -427,7 +427,7 @@ body {
 }
 
 .ms-compact.ms-open .ms-compact-arrow {
-  transform: rotate(90deg);
+  transform: rotate(180deg);
 }
 
 /* Точка статуса внутри компактной строки */
@@ -462,8 +462,9 @@ body {
 /* ---------- Выпадающая панель ---------- */
 .ms-panel {
   position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
+  top: 0; /* выравниваем по верхнему краю строки */
+  left: calc(100% + 8px); /* справа от компактной строки, с отступом 8px */
+  right: auto; /* отключаем прижатие вправо */
   width: 340px;
   max-width: 92vw;
   padding: 12px 14px;
@@ -476,7 +477,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   box-sizing: border-box;
   opacity: 0;
-  transform: translateY(-6px) scale(0.98);
+  transform: translateX(-8px) scale(0.98); /* ← сдвиг влево для анимации «вправо» */
   pointer-events: none;
   transition: opacity 0.2s ease, transform 0.2s ease;
   z-index: 1000;
@@ -484,7 +485,7 @@ body {
 
 .ms-panel.ms-open {
   opacity: 1;
-  transform: translateY(0) scale(1);
+  transform: translateX(0) scale(1); /* ← панель «выезжает» вправо */
   pointer-events: auto;
 }
 
@@ -700,10 +701,16 @@ body {
     display: none;
   }
   .ms-panel {
-    right: auto;
-    left: 0;
+    /* на мобиле справа места нет — раскрываем влево, чтобы не выйти за экран */
+    left: auto;
+    right: 0;
+    top: calc(100% + 8px); /* и под строкой, а не справа */
     width: calc(100vw - 40px);
     max-width: 340px;
+    transform: translateY(-6px) scale(0.98);
+  }
+  .ms-panel.ms-open {
+    transform: translateY(0) scale(1);
   }
   .ms-row {
     grid-template-columns: 78px 1fr 32px;
