@@ -2394,7 +2394,7 @@ class UIRenderer {
                 <div class="widget-header">
                     <div>
                         <span class="widget-title">⚛ CRYPTO SIGNAL TOOL ⚛</span>
-                        <span class="widget-version">v10.1 • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin) • Веса настраиваются в CONFIG.scoring.weights</span>
+                        <span class="widget-version">v10.1 • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin) •</span>
                     </div>
                     <div class="widget-status-group">
                         <div class="sound-controls">
