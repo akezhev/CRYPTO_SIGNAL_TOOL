@@ -261,14 +261,14 @@ body {
   cursor: pointer;
   padding: 4px;
   border-radius: 50%;
-  font-size: 20px;
+  font-size: 22px;
   color: rgb(66, 179, 250);
   transition: transform 0.25s ease, background 0.2s ease;
   font-family: inherit;
 }
 
 .tf-arrow:hover {
-  background: rgba(200, 79, 252, 0.3);
+  background: rgba(66, 179, 250, 0.12);
 }
 
 .tf-arrow.active {
