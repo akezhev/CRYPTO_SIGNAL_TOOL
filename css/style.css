@@ -259,9 +259,9 @@ body {
   background: transparent;
   border: none;
   cursor: pointer;
-  padding: 4px 6px;
+  padding: 4px;
   border-radius: 50%;
-  font-size: 16px;
+  font-size: 20px;
   color: rgb(66, 179, 250);
   transition: transform 0.25s ease, background 0.2s ease;
   margin: 0 2px;
