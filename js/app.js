@@ -1,10 +1,11 @@
 // ============================================================
-//  МОДУЛЬ CRYPTO SIGNAL TOOL (v10.0)
+//  МОДУЛЬ CRYPTO SIGNAL TOOL (v10.1)
 //  + Fear & Greed Index
 //  + Market State Widget (Macro Heatmap)
 //  + Выпадающая документация справа под ms-panel
 //  + TF-arrow: выпадающая карточка doc-card активного TF
 //  + При смене TF панель ОСТАЁТСЯ открытой, меняется только контент
+//  + КОНФИГУРИРУЕМЫЕ ВЕСА ИНДИКАТОРОВ С АВТОНОРМИРОВКОЙ К 100%
 // ============================================================
 
 // ---------- Конфигурация ----------
@@ -56,6 +57,33 @@ const CONFIG = {
   fearGreed: {
     intervalMs: 5 * 60 * 1000,
     neutralFallback: 50,
+  },
+
+  // ============================================================
+  //  НАСТРАИВАЕМЫЕ ВЕСА ИНДИКАТОРОВ
+  //  Итоговый балл автоматически нормируется к 0–100,
+  //  поэтому сумма весов может быть любой (не обязательно 100).
+  //  Хочешь усилить/ослабить индикатор — меняй одно число.
+  // ============================================================
+  scoring: {
+    // Максимальный вклад каждого индикатора ДО нормировки.
+    weights: {
+      rsi: 30, // RSI — перекупленность/перепроданность
+      macd: 20, // MACD — импульс и пересечение
+      ema: 20, // EMA Ribbon — тренд (8/13/21/50)
+      cvd: 15, // CVD — давление покупателей/продавцов
+      bb: 15, // Bollinger Bands — границы волатильности
+      volume: 10, // Volume Spike — всплеск объёма
+      poc: 5, // POC — точка контроля (объёмный уровень)
+    },
+    // Внутренние "ступеньки" для градаций внутри индикатора (доли от веса)
+    gradations: {
+      rsi: { extreme: 1.0, strong: 0.66, normal: 0.5, weak: 0.16 },
+      macd: { main: 1.0, trend: 0.5 },
+      bb: { touch: 1.0, squeeze: 0.66 },
+    },
+    // Порог "активного" сигнала (в нормированных %)
+    strongThreshold: 30,
   },
 };
 
@@ -864,6 +892,9 @@ class SignalGenerator {
     this.indicatorCalc = indicatorCalc;
   }
 
+  // ============================================================
+  //  ГЛАВНЫЙ МЕТОД: конфигурируемые веса + автонормировка к 100
+  // ============================================================
   generate(asset, tf, candles) {
     if (!candles || candles.length < CONFIG.minCandlesRequired) {
       return this._emptySignal(asset, tf);
@@ -871,144 +902,176 @@ class SignalGenerator {
     const ind = this.indicatorCalc.calculateAll(candles, tf);
     if (!ind) return this._emptySignal(asset, tf);
 
-    let buyScore = 0,
-      sellScore = 0;
-    const scores = {};
-
-    const rsi = ind.rsi;
-    if (rsi < 10) {
-      buyScore += 30;
-      scores.rsi = 30;
-    } else if (rsi > 90) {
-      sellScore += 30;
-      scores.rsi = -30;
-    } else if (rsi < 20) {
-      buyScore += 20;
-      scores.rsi = 20;
-    } else if (rsi > 80) {
-      sellScore += 20;
-      scores.rsi = -20;
-    } else if (rsi < 30) {
-      buyScore += 15;
-      scores.rsi = 15;
-    } else if (rsi > 70) {
-      sellScore += 15;
-      scores.rsi = -15;
-    } else if (rsi < 40) {
-      buyScore += 5;
-      scores.rsi = 5;
-    } else if (rsi > 60) {
-      sellScore += 5;
-      scores.rsi = -5;
-    } else scores.rsi = 0;
-
-    const hist = ind.macdHist;
-    if (hist > 0 && ind.macdLine > ind.macdSignal) {
-      buyScore += 20;
-      scores.macd = 20;
-    } else if (hist < 0 && ind.macdLine < ind.macdSignal) {
-      sellScore += 20;
-      scores.macd = -20;
-    } else if (hist > ind.macdPrevHist) {
-      buyScore += 10;
-      scores.macd = 10;
-    } else if (hist < ind.macdPrevHist) {
-      sellScore += 10;
-      scores.macd = -10;
-    } else scores.macd = 0;
-
-    const c = ind.close;
-    if (
-      c > ind.ema8 &&
-      ind.ema8 > ind.ema13 &&
-      ind.ema13 > ind.ema21 &&
-      ind.ema21 > ind.ema50
-    ) {
-      buyScore += 20;
-      scores.ema = 20;
-    } else if (
-      c < ind.ema8 &&
-      ind.ema8 < ind.ema13 &&
-      ind.ema13 < ind.ema21 &&
-      ind.ema21 < ind.ema50
-    ) {
-      sellScore += 20;
-      scores.ema = -20;
-    } else scores.ema = 0;
-
-    if (ind.cvd > ind.cvdPrev && ind.cvd > 0) {
-      buyScore += 15;
-      scores.cvd = 15;
-    } else if (ind.cvd < ind.cvdPrev && ind.cvd < 0) {
-      sellScore += 15;
-      scores.cvd = -15;
-    } else scores.cvd = 0;
-
-    if (c < ind.bbLower) {
-      buyScore += 15;
-      scores.bb = 15;
-    } else if (c > ind.bbUpper) {
-      sellScore += 15;
-      scores.bb = -15;
-    } else if (ind.bbWidth < 0.1 && c > ind.bbMiddle) {
-      buyScore += 10;
-      scores.bb = 10;
-    } else if (ind.bbWidth < 0.1 && c < ind.bbMiddle) {
-      sellScore += 10;
-      scores.bb = -10;
-    } else scores.bb = 0;
-
-    const volRatio = ind.volume / ind.volAvg;
-    if (volRatio > 1.5 && c > ind.ema8) {
-      buyScore += 10;
-      scores.volume = 10;
-    } else if (volRatio > 1.5 && c < ind.ema8) {
-      sellScore += 10;
-      scores.volume = -10;
-    } else scores.volume = 0;
-
-    const pocDist = Math.abs(c - ind.poc) / ind.atr;
-    if (pocDist < 0.2 && c > ind.ema8) {
-      buyScore += 5;
-      scores.poc = 5;
-    } else if (pocDist < 0.2 && c < ind.ema8) {
-      sellScore += 5;
-      scores.poc = -5;
-    } else scores.poc = 0;
-
-    const netScore = buyScore - sellScore;
-    const confidence = utils.clamp(Math.abs(netScore), 0, 100);
     const cfg = CONFIG.trading;
+    const sc = CONFIG.scoring;
+    const W = sc.weights;
+    const G = sc.gradations;
+
+    // Сумма весов для нормировки (динамическая — меняешь weights, нормировка подстроится)
+    const totalWeight = Object.values(W).reduce((s, v) => s + v, 0) || 1;
+
+    // Накопители "сырых" баллов (в единицах весов)
+    let buyRaw = 0;
+    let sellRaw = 0;
+    const scores = {}; // нормированные вклады (в % от totalWeight)
+
+    // ---------- 1. RSI ----------
+    {
+      const rsi = ind.rsi;
+      const w = W.rsi;
+      const g = G.rsi;
+      let raw = 0;
+      if (rsi < 10) raw = w * g.extreme;
+      else if (rsi > 90) raw = -w * g.extreme;
+      else if (rsi < 20) raw = w * g.strong;
+      else if (rsi > 80) raw = -w * g.strong;
+      else if (rsi < 30) raw = w * g.normal;
+      else if (rsi > 70) raw = -w * g.normal;
+      else if (rsi < 40) raw = w * g.weak;
+      else if (rsi > 60) raw = -w * g.weak;
+      if (raw > 0) buyRaw += raw;
+      else sellRaw += -raw;
+      scores.rsi = (raw / totalWeight) * 100;
+    }
+
+    // ---------- 2. MACD ----------
+    {
+      const w = W.macd;
+      const g = G.macd;
+      const hist = ind.macdHist;
+      let raw = 0;
+      if (hist > 0 && ind.macdLine > ind.macdSignal) raw = w * g.main;
+      else if (hist < 0 && ind.macdLine < ind.macdSignal) raw = -w * g.main;
+      else if (hist > ind.macdPrevHist) raw = w * g.trend;
+      else if (hist < ind.macdPrevHist) raw = -w * g.trend;
+      if (raw > 0) buyRaw += raw;
+      else sellRaw += -raw;
+      scores.macd = (raw / totalWeight) * 100;
+    }
+
+    // ---------- 3. EMA Ribbon ----------
+    {
+      const w = W.ema;
+      const c = ind.close;
+      let raw = 0;
+      if (
+        c > ind.ema8 &&
+        ind.ema8 > ind.ema13 &&
+        ind.ema13 > ind.ema21 &&
+        ind.ema21 > ind.ema50
+      ) {
+        raw = w;
+      } else if (
+        c < ind.ema8 &&
+        ind.ema8 < ind.ema13 &&
+        ind.ema13 < ind.ema21 &&
+        ind.ema21 < ind.ema50
+      ) {
+        raw = -w;
+      }
+      if (raw > 0) buyRaw += raw;
+      else sellRaw += -raw;
+      scores.ema = (raw / totalWeight) * 100;
+    }
+
+    // ---------- 4. CVD ----------
+    {
+      const w = W.cvd;
+      let raw = 0;
+      if (ind.cvd > ind.cvdPrev && ind.cvd > 0) raw = w;
+      else if (ind.cvd < ind.cvdPrev && ind.cvd < 0) raw = -w;
+      if (raw > 0) buyRaw += raw;
+      else sellRaw += -raw;
+      scores.cvd = (raw / totalWeight) * 100;
+    }
+
+    // ---------- 5. Bollinger Bands ----------
+    {
+      const w = W.bb;
+      const g = G.bb;
+      const c = ind.close;
+      let raw = 0;
+      if (c < ind.bbLower) raw = w * g.touch;
+      else if (c > ind.bbUpper) raw = -w * g.touch;
+      else if (ind.bbWidth < 0.1 && c > ind.bbMiddle) raw = w * g.squeeze;
+      else if (ind.bbWidth < 0.1 && c < ind.bbMiddle) raw = -w * g.squeeze;
+      if (raw > 0) buyRaw += raw;
+      else sellRaw += -raw;
+      scores.bb = (raw / totalWeight) * 100;
+    }
+
+    // ---------- 6. Volume Spike ----------
+    {
+      const w = W.volume;
+      const c = ind.close;
+      const volRatio = ind.volume / (ind.volAvg || 1);
+      let raw = 0;
+      if (volRatio > 1.5 && c > ind.ema8) raw = w;
+      else if (volRatio > 1.5 && c < ind.ema8) raw = -w;
+      if (raw > 0) buyRaw += raw;
+      else sellRaw += -raw;
+      scores.volume = (raw / totalWeight) * 100;
+    }
+
+    // ---------- 7. POC ----------
+    {
+      const w = W.poc;
+      const c = ind.close;
+      const atr = ind.atr || 0.01;
+      const pocDist = Math.abs(c - ind.poc) / atr;
+      let raw = 0;
+      if (pocDist < 0.2 && c > ind.ema8) raw = w;
+      else if (pocDist < 0.2 && c < ind.ema8) raw = -w;
+      if (raw > 0) buyRaw += raw;
+      else sellRaw += -raw;
+      scores.poc = (raw / totalWeight) * 100;
+    }
+
+    // ---------- Итоговая нормировка к 100 ----------
+    const netRaw = buyRaw - sellRaw; // диапазон [-totalWeight, +totalWeight]
+    const netScore = (netRaw / totalWeight) * 100; // → [-100, +100]
+    const confidence = Math.round(utils.clamp(Math.abs(netScore), 0, 100));
+
+    // Округление вкладов индикаторов для UI
+    const scoresPct = {};
+    for (const k of Object.keys(scores)) {
+      scoresPct[k] = Math.round(scores[k] * 10) / 10;
+    }
+
+    // ---------- Направление и подтверждения ----------
     const buyAligned = this._isEntryAligned(ind, "BUY");
     const sellAligned = this._isEntryAligned(ind, "SELL");
     const htfBuy = this._htfConfirms(tf, candles, "BUY");
     const htfSell = this._htfConfirms(tf, candles, "SELL");
 
     let scoreDirection = "NEUTRAL";
-    if (netScore > 30 && ind.trendStrength > -1) scoreDirection = "BUY";
-    else if (netScore < -30 && ind.trendStrength < 1) scoreDirection = "SELL";
+    if (netScore > sc.strongThreshold && ind.trendStrength > -1)
+      scoreDirection = "BUY";
+    else if (netScore < -sc.strongThreshold && ind.trendStrength < 1)
+      scoreDirection = "SELL";
 
     let direction = "NEUTRAL";
     if (
       buyAligned &&
       htfBuy &&
       confidence >= cfg.minConfidence &&
-      netScore > 30
+      netScore > sc.strongThreshold
     )
       direction = "BUY";
     else if (
       sellAligned &&
       htfSell &&
       confidence >= cfg.minConfidence &&
-      netScore < -30
+      netScore < -sc.strongThreshold
     )
       direction = "SELL";
 
     const actionProbs = this._calcActionProbs(
-      buyScore,
-      sellScore,
+      buyRaw,
+      sellRaw,
       ind.trendStrength,
-      ind.bbWidth
+      ind.bbWidth,
+      totalWeight
     );
 
     return {
@@ -1016,7 +1079,7 @@ class SignalGenerator {
       timeframe: tf,
       direction,
       scoreDirection,
-      confidence: Math.round(confidence),
+      confidence,
       price: ind.close,
       atr: ind.atr,
       htfTimeframe: this._htfFor(tf),
@@ -1033,7 +1096,7 @@ class SignalGenerator {
         trendStrength: ind.trendStrength.toFixed(2),
       },
       actionProbabilities: actionProbs,
-      indicatorScores: scores,
+      indicatorScores: scoresPct, // нормированные вклады для UI
       status: "Активен",
     };
   }
@@ -1090,9 +1153,12 @@ class SignalGenerator {
     return agg;
   }
 
-  _calcActionProbs(buyScore, sellScore, trendStrength, bbWidth) {
-    let buyProb = Math.min((buyScore / 100) * 100, 100);
-    let sellProb = Math.min((sellScore / 100) * 100, 100);
+  // Нормированная версия: принимает сырые buyRaw/sellRaw и totalWeight
+  _calcActionProbs(buyRaw, sellRaw, trendStrength, bbWidth, totalWeight) {
+    const denom = totalWeight || 1;
+    let buyProb = Math.min((buyRaw / denom) * 100, 100);
+    let sellProb = Math.min((sellRaw / denom) * 100, 100);
+
     if (bbWidth < 0.05) {
       buyProb *= 0.7;
       sellProb *= 0.7;
@@ -2141,22 +2207,15 @@ class TFGuidePanel {
     this._onDocClick = (e) => {
       if (!this._isOpen) return;
 
-      // Игнорируем клики по самому триггеру ◂ — их обрабатывает
-      // отдельный listener на кнопке (через toggle).
       if (this._el.trigger && this._el.trigger.contains(e.target)) return;
 
-      // Игнорируем клики по кнопкам таймфреймов — они не должны
-      // закрывать панель, а лишь менять содержимое.
       const tfBtn = e.target.closest?.(".tf-btn");
       if (tfBtn) return;
 
-      // Игнорируем клики по кнопке закрытия — обрабатывается отдельно.
       if (this._el.closeBtn && this._el.closeBtn.contains(e.target)) return;
 
-      // Клик внутри панели — не закрываем.
       if (this._el.wrap && this._el.wrap.contains(e.target)) return;
 
-      // Всё остальное — закрываем.
       this.close();
     };
 
@@ -2199,17 +2258,9 @@ class TFGuidePanel {
     document.removeEventListener("keydown", this._onKeyDown);
   }
 
-  /**
-   * Смена таймфрейма.
-   * ВАЖНО: панель НЕ закрывается и НЕ открывается принудительно —
-   * её видимость (open/close) управляется отдельно. Здесь
-   * меняется только содержимое карточки.
-   */
   setTF(tf) {
     this._currentTF = tf;
     this._renderCard(tf);
-    // Если панель открыта — она остаётся открытой.
-    // Если закрыта — остаётся закрытой.
   }
 
   toggle() {
@@ -2343,7 +2394,7 @@ class UIRenderer {
                 <div class="widget-header">
                     <div>
                         <span class="widget-title">⚛ CRYPTO SIGNAL TOOL ⚛</span>
-                        <span class="widget-version">v9.8 • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin) •</span>
+                        <span class="widget-version">v10.1 • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin) • Веса настраиваются в CONFIG.scoring.weights</span>
                     </div>
                     <div class="widget-status-group">
                         <div class="sound-controls">
@@ -2441,6 +2492,10 @@ class UIRenderer {
   }
 
   _buildDocs() {
+    const w = CONFIG.scoring.weights;
+    const totalW = Object.values(w).reduce((s, v) => s + v, 0) || 1;
+    const pct = (k) => Math.round((w[k] / totalW) * 100);
+
     return `
             <div class="doc-grid">
                 ${CONFIG.timeframes
@@ -2485,14 +2540,15 @@ class UIRenderer {
             <br>
             <span>Данное приложение — это мощный инструмент для принятия торговых решений, но не гарантия прибыли. Это профессиональный торговый терминал для криптовалют, который объединяет 7 лучших технических индикаторов в единую систему генерации сигналов. Приложение работает в реальном времени, анализируя данные с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin)</span>
             <br><br>
-            <span>🧠 РАСШИФРОВКА 7 ИНДИКАТОРОВ<br>
-              1. RSI — Вес 15%<br>
-              2. MACD — Вес 20%<br>
-              3. EMA Ribbon — Вес 20%<br>
-              4. CVD — Вес 15%<br>
-              5. Bollinger Bands — Вес 15%<br>
-              6. Volume Spike — Вес 10%<br>
-              7. POC — Вес 5%<br>
+            <span>🧠 РАСШИФРОВКА 7 ИНДИКАТОРОВ (веса настраиваются в CONFIG.scoring.weights, итог автонормируется к 100%)<br>
+              1. RSI — вес ${w.rsi} → ${pct("rsi")}%<br>
+              2. MACD — вес ${w.macd} → ${pct("macd")}%<br>
+              3. EMA Ribbon — вес ${w.ema} → ${pct("ema")}%<br>
+              4. CVD — вес ${w.cvd} → ${pct("cvd")}%<br>
+              5. Bollinger Bands — вес ${w.bb} → ${pct("bb")}%<br>
+              6. Volume Spike — вес ${w.volume} → ${pct("volume")}%<br>
+              7. POC — вес ${w.poc} → ${pct("poc")}%<br>
+              <em style="color:#64748b;">Сумма сырых весов: ${totalW} (нормируется автоматически).</em>
             </span>
             <br>
             <span>
@@ -2585,8 +2641,6 @@ class UIRenderer {
           .forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
         this.currentTF = btn.dataset.tf;
-        // Меняем содержимое карточки. Панель остаётся в текущем
-        // состоянии (открыта/закрыта) — это ключевое требование.
         this.tfGuide.setTF(this.currentTF);
         if (this.onTFChange) this.onTFChange(this.currentTF);
       });
@@ -2674,6 +2728,9 @@ class UIRenderer {
       const valueEl = item.querySelector(".ind-value");
       const barFill = item.querySelector(".indicator-bar-fill");
       if (!valueEl || !barFill) return;
+
+      // scores теперь в диапазоне примерно [-50%, +50%] (нормированные).
+      // Масштабируем для UI: 20 → 100%.
       let direction = "neutral",
         display = "0%";
       if (score > 0) {
