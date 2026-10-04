@@ -131,7 +131,7 @@ const TF_GUIDES = {
   },
   "1h": {
     name: "1 Час",
-    icon: "🕒",
+    icon: "🕐",
     action: {
       BUY: "Стандартный вход. Цель: +1-3%. Стоп: -1-1.5%.",
       SELL: "Стандартный выход. Цель: +1-3%. Стоп: -1-1.5%.",
@@ -144,7 +144,7 @@ const TF_GUIDES = {
   },
   "2h": {
     name: "2 Часа",
-    icon: "🕒",
+    icon: "🕑",
     action: {
       BUY: "Свинг-трейдинг. Цель: +2-4%. Стоп: -1.5-2%.",
       SELL: "Свинг-выход. Цель: +2-4%. Стоп: -1.5-2%.",
@@ -157,7 +157,7 @@ const TF_GUIDES = {
   },
   "4h": {
     name: "4 Часа",
-    icon: "🕒",
+    icon: "🕓",
     action: {
       BUY: "Среднесрочный вход. Цель: +3-6%. Стоп: -2-3%.",
       SELL: "Среднесрочный выход. Цель: +3-6%. Стоп: -2-3%.",
@@ -442,7 +442,7 @@ class DataLoader {
           if (!url) continue;
 
           console.log(
-            `📥 Загрузка ${symbol} с ${ex.id} (${formattedSymbol})...`,
+            `📀 Загрузка ${symbol} с ${ex.id} (${formattedSymbol})...`,
           );
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), this.timeout);
