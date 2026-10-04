@@ -84,6 +84,7 @@ body {
     0 0 80px #ff005e;
   animation: glow 1.5s infinite alternate;
 }
+
 @keyframes glow {
   0% {
     text-shadow:
@@ -119,6 +120,7 @@ body {
   gap: 12px;
   flex-wrap: wrap;
 }
+
 .ws-status-group {
   display: flex;
   margin-left: auto;
@@ -175,19 +177,17 @@ body {
   background: rgba(1, 147, 204, 0.08);
   transform: scale(1.05);
 }
-
 .sound-toggle.active {
   color: #34d399;
 }
-
 .sound-toggle.muted {
   color: #f87171;
 }
-
 .sound-toggle .sound-label {
   font-size: 10px;
   font-weight: 500;
 }
+
 .sound-info {
   padding-right: 5px;
   font-size: 10px;
@@ -212,13 +212,11 @@ body {
   height: 8px;
   border-radius: 50%;
 }
-
 .sound-indicator.on {
   background: #34d399;
   box-shadow: 0 0 10px rgba(52, 211, 153, 0.5);
   animation: pulse-sound 2s ease-in-out infinite;
 }
-
 .sound-indicator.off {
   background: #f87171;
 }
@@ -295,7 +293,6 @@ body {
 .tf-arrow:hover {
   background: rgba(66, 179, 250, 0.12);
 }
-
 .tf-arrow.active {
   transform: rotate(180deg);
 }
@@ -305,9 +302,11 @@ body {
   position: absolute;
   top: 0;
   right: calc(100% + 8px);
-  width: 320px;
+  width: 380px;
   max-width: 92vw;
-  padding: 10px 12px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 12px 14px;
   background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
   border: 1px solid rgb(66, 179, 250);
   border-radius: 12px;
@@ -326,6 +325,18 @@ body {
     opacity 0.2s ease,
     transform 0.2s ease,
     visibility 0s linear 0.2s;
+}
+
+.tf-guide-panel::-webkit-scrollbar {
+  width: 4px;
+}
+.tf-guide-panel::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+}
+.tf-guide-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
 }
 
 .tf-guide-panel.ms-open {
@@ -391,28 +402,6 @@ body {
   color: #60a5fa;
   font-size: 13px;
   margin-bottom: 4px;
-}
-.tf-guide-panel-body .action-buy {
-  color: #34d399;
-  font-weight: 600;
-}
-.tf-guide-panel-body .action-sell {
-  color: #f87171;
-  font-weight: 600;
-}
-.tf-guide-panel-body .action-wait {
-  color: #94a3b8;
-  font-weight: 600;
-}
-.tf-guide-panel-body .risk-label {
-  color: #64748b;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-.tf-guide-panel-body .risk-value {
-  color: #e2e8f0;
-  font-weight: 500;
 }
 
 /* ============================================================
@@ -965,16 +954,13 @@ body {
 .ms-docs-content p {
   margin: 0 0 6px 0;
 }
-
 .ms-docs-content ul {
   margin: 0 0 6px 0;
   padding-left: 16px;
 }
-
 .ms-docs-content li {
   margin-bottom: 2px;
 }
-
 .ms-docs-content strong {
   color: #e2e8f0;
 }
@@ -1020,13 +1006,12 @@ body {
     grid-template-columns: 78px 1fr 32px;
     font-size: 10px;
   }
-  /* TF-arrow на мобильных */
   .tf-guide-panel {
     right: auto;
     left: 0;
     top: calc(100% + 8px);
     width: calc(100vw - 40px);
-    max-width: 300px;
+    max-width: 340px;
     transform: translateY(-6px);
   }
   .tf-guide-panel.ms-open {
@@ -1062,197 +1047,168 @@ body {
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
 }
 
+/* Пульсирующие рамки */
 @keyframes glow-border-green-60 {
-  0% {
+  0%,
+  100% {
     border-color: rgba(52, 211, 153, 0.2);
-    border-width: 4px;
+    box-shadow: none;
   }
   50% {
     border-color: rgba(52, 211, 153, 0.6);
-    border-width: 4px;
     box-shadow: 0 0 18px rgba(52, 211, 153, 0.2);
-  }
-  100% {
-    border-color: rgba(52, 211, 153, 0.2);
-    border-width: 4px;
   }
 }
 @keyframes glow-border-green-65 {
-  0% {
+  0%,
+  100% {
     border-color: rgba(52, 211, 153, 0.3);
-    border-width: 4px;
+    box-shadow: none;
   }
   50% {
     border-color: rgba(52, 211, 153, 0.7);
-    border-width: 4px;
     box-shadow: 0 0 22px rgba(52, 211, 153, 0.25);
-  }
-  100% {
-    border-color: rgba(52, 211, 153, 0.3);
-    border-width: 4px;
   }
 }
 @keyframes glow-border-green-70 {
-  0% {
+  0%,
+  100% {
     border-color: rgba(52, 211, 153, 0.4);
-    border-width: 4px;
+    box-shadow: none;
   }
   50% {
     border-color: rgba(52, 211, 153, 0.8);
-    border-width: 4px;
     box-shadow: 0 0 26px rgba(52, 211, 153, 0.3);
-  }
-  100% {
-    border-color: rgba(52, 211, 153, 0.4);
-    border-width: 4px;
   }
 }
 @keyframes glow-border-green-75 {
-  0% {
+  0%,
+  100% {
     border-color: rgba(52, 211, 153, 0.5);
-    border-width: 5px;
+    box-shadow: none;
   }
   50% {
     border-color: #34d399;
-    border-width: 5px;
     box-shadow: 0 0 30px rgba(52, 211, 153, 0.35);
-  }
-  100% {
-    border-color: rgba(52, 211, 153, 0.5);
-    border-width: 5px;
   }
 }
 @keyframes glow-border-green-80 {
-  0% {
+  0%,
+  100% {
     border-color: rgba(52, 211, 153, 0.6);
-    border-width: 5px;
+    box-shadow: none;
   }
   50% {
     border-color: #10b981;
-    border-width: 5px;
     box-shadow: 0 0 40px rgba(52, 211, 153, 0.5);
-  }
-  100% {
-    border-color: rgba(52, 211, 153, 0.6);
-    border-width: 5px;
   }
 }
 
 @keyframes glow-border-red-60 {
-  0% {
+  0%,
+  100% {
     border-color: rgba(248, 113, 113, 0.2);
-    border-width: 4px;
+    box-shadow: none;
   }
   50% {
     border-color: rgba(248, 113, 113, 0.6);
-    border-width: 4px;
     box-shadow: 0 0 18px rgba(248, 113, 113, 0.2);
-  }
-  100% {
-    border-color: rgba(248, 113, 113, 0.2);
-    border-width: 4px;
   }
 }
 @keyframes glow-border-red-65 {
-  0% {
+  0%,
+  100% {
     border-color: rgba(248, 113, 113, 0.3);
-    border-width: 4px;
+    box-shadow: none;
   }
   50% {
     border-color: rgba(248, 113, 113, 0.7);
-    border-width: 4px;
     box-shadow: 0 0 22px rgba(248, 113, 113, 0.25);
-  }
-  100% {
-    border-color: rgba(248, 113, 113, 0.3);
-    border-width: 4px;
   }
 }
 @keyframes glow-border-red-70 {
-  0% {
+  0%,
+  100% {
     border-color: rgba(248, 113, 113, 0.4);
-    border-width: 4px;
+    box-shadow: none;
   }
   50% {
     border-color: rgba(248, 113, 113, 0.8);
-    border-width: 4px;
     box-shadow: 0 0 26px rgba(248, 113, 113, 0.3);
-  }
-  100% {
-    border-color: rgba(248, 113, 113, 0.4);
-    border-width: 4px;
   }
 }
 @keyframes glow-border-red-75 {
-  0% {
+  0%,
+  100% {
     border-color: rgba(248, 113, 113, 0.5);
-    border-width: 5px;
+    box-shadow: none;
   }
   50% {
     border-color: #f87171;
-    border-width: 5px;
     box-shadow: 0 0 30px rgba(248, 113, 113, 0.35);
-  }
-  100% {
-    border-color: rgba(248, 113, 113, 0.5);
-    border-width: 5px;
   }
 }
 @keyframes glow-border-red-80 {
-  0% {
+  0%,
+  100% {
     border-color: rgba(248, 113, 113, 0.6);
-    border-width: 5px;
+    box-shadow: none;
   }
   50% {
     border-color: #ef4444;
-    border-width: 5px;
     box-shadow: 0 0 40px rgba(248, 113, 113, 0.5);
-  }
-  100% {
-    border-color: rgba(248, 113, 113, 0.6);
-    border-width: 5px;
   }
 }
 
 .signal-card.buy-60 {
   animation: glow-border-green-60 2s ease-in-out infinite;
+  border-width: 4px;
   border-style: solid;
 }
 .signal-card.buy-65 {
   animation: glow-border-green-65 1.5s ease-in-out infinite;
+  border-width: 4px;
   border-style: solid;
 }
 .signal-card.buy-70 {
   animation: glow-border-green-70 1.2s ease-in-out infinite;
+  border-width: 4px;
   border-style: solid;
 }
 .signal-card.buy-75 {
   animation: glow-border-green-75 0.9s ease-in-out infinite;
+  border-width: 5px;
   border-style: solid;
 }
 .signal-card.buy-80 {
   animation: glow-border-green-80 0.6s ease-in-out infinite;
+  border-width: 5px;
   border-style: solid;
 }
 
 .signal-card.sell-60 {
   animation: glow-border-red-60 2s ease-in-out infinite;
+  border-width: 4px;
   border-style: solid;
 }
 .signal-card.sell-65 {
   animation: glow-border-red-65 1.5s ease-in-out infinite;
+  border-width: 4px;
   border-style: solid;
 }
 .signal-card.sell-70 {
   animation: glow-border-red-70 1.2s ease-in-out infinite;
+  border-width: 4px;
   border-style: solid;
 }
 .signal-card.sell-75 {
   animation: glow-border-red-75 0.9s ease-in-out infinite;
+  border-width: 5px;
   border-style: solid;
 }
 .signal-card.sell-80 {
   animation: glow-border-red-80 0.6s ease-in-out infinite;
+  border-width: 5px;
   border-style: solid;
 }
 
@@ -1780,7 +1736,7 @@ body {
 
 .doc-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
   margin-bottom: 12px;
 }
@@ -1858,6 +1814,93 @@ body {
 .doc-legend .legend-dot.strong-dot {
   background: #10b981;
   box-shadow: 0 0 10px rgba(52, 211, 153, 0.3);
+}
+
+/* ============================================================
+   EXTENDED DOC CARD (v10.2 — расширенные гайды по TF)
+============================================================ */
+.doc-card-extended {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.doc-card-extended .tf-tagline {
+  font-size: 10px;
+  color: #64748b;
+  font-style: italic;
+  letter-spacing: 0.2px;
+  margin-top: -4px;
+}
+
+.doc-card-extended .doc-section {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #cbd5e1;
+  margin: 0;
+}
+
+.doc-card-extended .doc-section-desc {
+  color: #cbd5e1;
+  background: rgba(148, 163, 184, 0.06);
+  padding: 7px 9px;
+  border-radius: 6px;
+  border-left: 2px solid #60a5fa;
+}
+
+.doc-card-extended .doc-section-entry {
+  color: #d1fae5;
+  background: rgba(52, 211, 153, 0.07);
+  padding: 7px 9px;
+  border-radius: 6px;
+  border-left: 2px solid #34d399;
+}
+
+.doc-card-extended .doc-section-wait {
+  color: #fee2e2;
+  background: rgba(248, 113, 113, 0.07);
+  padding: 7px 9px;
+  border-radius: 6px;
+  border-left: 2px solid #f87171;
+}
+
+.doc-card-extended .doc-section-actions {
+  padding: 6px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.doc-card-extended .doc-section-params {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  font-size: 11px;
+  padding: 2px 0;
+}
+
+.doc-card-extended .doc-section-tip {
+  font-size: 10.5px;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.08);
+  padding: 7px 9px;
+  border-radius: 6px;
+  border-left: 2px solid #fbbf24;
+  line-height: 1.5;
+}
+
+.doc-card-extended .doc-section-tip b {
+  color: #fcd34d;
+}
+
+/* Мобильный вид для расширенной карточки */
+@media (max-width: 480px) {
+  .doc-card-extended .doc-section-params {
+    grid-template-columns: 1fr;
+  }
+  .doc-card-extended {
+    padding: 10px 12px;
+  }
 }
 
 /* ============================================================
@@ -1943,6 +1986,9 @@ body {
   }
 }
 
+/* ============================================================
+   GLOBAL SCROLLBAR
+============================================================ */
 ::-webkit-scrollbar {
   width: 4px;
   height: 4px;

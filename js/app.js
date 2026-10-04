@@ -6,6 +6,7 @@
 //  + TF-arrow: выпадающая карточка doc-card активного TF
 //  + При смене TF панель ОСТАЁТСЯ открытой, меняется только контент
 //  + КОНФИГУРИРУЕМЫЕ ВЕСА ИНДИКАТОРОВ С АВТОНОРМИРОВКОЙ К 100%
+//  + РАСШИРЕННЫЕ ГАЙДЫ ПО ТАЙМФРЕЙМАМ (v10.2)
 // ============================================================
 
 // ---------- Конфигурация ----------
@@ -66,23 +67,20 @@ const CONFIG = {
   //  Хочешь усилить/ослабить индикатор — меняй одно число.
   // ============================================================
   scoring: {
-    // Максимальный вклад каждого индикатора ДО нормировки.
     weights: {
-      rsi: 30, // RSI — перекупленность/перепроданность
-      macd: 20, // MACD — импульс и пересечение
-      ema: 20, // EMA Ribbon — тренд (8/13/21/50)
-      cvd: 15, // CVD — давление покупателей/продавцов
-      bb: 15, // Bollinger Bands — границы волатильности
-      volume: 10, // Volume Spike — всплеск объёма
-      poc: 5, // POC — точка контроля (объёмный уровень)
+      rsi: 30,
+      macd: 20,
+      ema: 20,
+      cvd: 15,
+      bb: 15,
+      volume: 10,
+      poc: 5,
     },
-    // Внутренние "ступеньки" для градаций внутри индикатора (доли от веса)
     gradations: {
       rsi: { extreme: 1.0, strong: 0.66, normal: 0.5, weak: 0.16 },
       macd: { main: 1.0, trend: 0.5 },
       bb: { touch: 1.0, squeeze: 0.66 },
     },
-    // Порог "активного" сигнала (в нормированных %)
     strongThreshold: 30,
   },
 };
@@ -114,87 +112,204 @@ const MACRO_SCALE = [
   { min: 0, max: 19, label: "Экстрим", color: "#ef4444", barClass: "ms-red" },
 ];
 
-// ---------- Гайды по таймфреймам ----------
+// ============================================================
+//  ГАЙДЫ ПО ТАЙМФРЕЙМАМ (расширенные, v10.2)
+// ============================================================
 const TF_GUIDES = {
   "15m": {
     name: "15 Минут",
-    description: "Что смотреть в первую очередь: Volume Spike + CVD + RSI<br>"
-    "MACD на 15m даёт много ложных сигналов — вес снижается автоматически"<br>
-    "EMA Ribbon работает только если все 4 EMA выстроены в идеальный порядок"<br>
     icon: "⚡",
+    tagline: "Скальпинг • Высокий риск",
+    description:
+      "<b>Что смотреть в первую очередь:</b> Volume Spike + CVD + RSI<br>" +
+      "• MACD на 15m даёт много ложных сигналов — вес снижается автоматически<br>" +
+      "• EMA Ribbon работает только если все 4 EMA выстроены в идеальный порядок<br>" +
+      "• 15m — самый шумный TF. Без подтверждения старшего TF — не входить.",
+    entryDescription:
+      "<b>Когда входить:</b><br>" +
+      "• RSI &lt; 30 (перепродан) и CVD растёт (покупатели возвращаются)<br>" +
+      "• Volume Spike &gt; 1.5× от среднего и цена выше EMA8<br>" +
+      "• Цена касается нижней полосы Боллинджера и отскакивает<br>" +
+      "• POC рядом (в пределах 0.2 ATR) — уровень поддержки<br>" +
+      "• Confidence ≥ 75% и HTF (1h) подтверждает",
+    waitDescription:
+      "<b>Когда ждать:</b><br>" +
+      "• Bollinger Width &lt; 0.05 — сжатие, рынок в боковике → не входить, ждать пробоя<br>" +
+      "• RSI между 40–60 и MACD флэт → нет импульса<br>" +
+      "• CVD и цена расходятся → ложный сигнал<br>" +
+      "• BB Width &gt; 0.1 — волатильность высока, рынок в шуме<br>" +
+      "• EMA Ribbon не в порядке → тренд не определён<br>" +
+      "• Нет Volume Spike → нет топлива для движения",
     action: {
       BUY: "Скальпинг. Цель: +0.5-1.5%. Стоп: -0.5-1%.",
-      description: "Когда входить:"<br>
-      "• RSI < 30 (перепродан) и CVD растёт (покупатели возвращаются)"<br>
-      "• Volume Spike > 1.5× от среднего и цена выше EMA8"<br>
-      "• Цена касается нижней полосы Боллинджера и отскакивает"<br>
-      "• POC рядом (в пределах 0.2 ATR) — уровень поддержки"<br>
       SELL: "Краткосрочный выход. Цель: +0.5-1.5%. Стоп: -0.5-1%.",
       WAIT: "Рынок неопределён. Ждите 1H+.",
-      description: "Когда ждать:"<br>
-      "• Bollinger Width < 0.05 — сжатие, рынок в боковике → не входить, ждать пробоя"<br>
-      "• RSI между 40–60 и MACD флэт → нет импульса"<br>
-      "• CVD и цена расходятся → ложный сигнал"<br>
-      "• BB Width > 0.1 — волатильность высока, рынок в шуме"<br>
-      "• EMA Ribbon не в порядке → тренд не определён"<br>
-      "• Нет Volume Spike → нет топлива для движения"<br>
     },
     risk: "Высокий",
+    leverage: "1–2× (макс. 3× опытным)",
     positionSize: "1-2%",
     stopLoss: "0.5-1%",
     takeProfit: "0.5-1.5%",
+    holdTime: "15–60 минут",
+    proTip: "Профи не торгуют 15m без HTF-подтверждения — слишком много шума.",
   },
+
   "1h": {
     name: "1 Час",
     icon: "🕐",
+    tagline: "Стандартный внутридневной",
+    description:
+      "<b>Что смотреть в первую очередь:</b> MACD + EMA Ribbon + RSI<br>" +
+      "• «Золотая середина»: достаточно данных для тренда, но не слишком медленно<br>" +
+      "• CVD начинает давать значимые сигналы (не шум)<br>" +
+      "• Лучшее соотношение сигнал/шум среди всех TF.",
+    entryDescription:
+      "<b>Когда входить:</b><br>" +
+      "• EMA8 &gt; EMA13 &gt; EMA21 &gt; EMA50 (полный бычий порядок)<br>" +
+      "• MACD histogram &gt; 0 и растёт (импульс набирает силу)<br>" +
+      "• RSI 40–65 (не перекуплен, есть запас роста)<br>" +
+      "• CVD растёт и положительный<br>" +
+      "• Volume Spike подтверждает вход<br>" +
+      "• HTF (4h) подтверждает направление",
+    waitDescription:
+      "<b>Когда ждать:</b><br>" +
+      "• EMA выстроены в «спутанный клубок» — нет тренда<br>" +
+      "• MACD histogram колеблется вокруг нуля<br>" +
+      "• Confidence &lt; 65% — сигнал слабый, ждать 2H+<br>" +
+      "• HTF (4h) не подтверждает направление<br>" +
+      "• RSI 40–60 и нет чёткого импульса",
     action: {
       BUY: "Стандартный вход. Цель: +1-3%. Стоп: -1-1.5%.",
       SELL: "Стандартный выход. Цель: +1-3%. Стоп: -1-1.5%.",
       WAIT: "Сигнал слабый. Ждите 2H+.",
     },
     risk: "Средний",
+    leverage: "2–3× (профи)",
     positionSize: "3-5%",
     stopLoss: "1-1.5%",
     takeProfit: "1-3%",
+    holdTime: "1–8 часов",
+    proTip:
+      "1h — оптимальный TF для большинства. Здесь лучшее соотношение сигнал/шум.",
   },
+
   "2h": {
     name: "2 Часа",
     icon: "🕑",
+    tagline: "Свинг-трейдинг",
+    description:
+      "<b>Что смотреть в первую очередь:</b> EMA Ribbon + POC + MACD<br>" +
+      "• Тренд более устойчив, меньше ложных пробоев<br>" +
+      "• POC начинает работать как реальный уровень поддержки/сопротивления<br>" +
+      "• Хорошо подходит для удержания позиции через ночь.",
+    entryDescription:
+      "<b>Когда входить:</b><br>" +
+      "• Цена выше EMA50 и EMA Ribbon выстроена<br>" +
+      "• MACD line &gt; signal line, histogram растёт<br>" +
+      "• RSI 45–70<br>" +
+      "• POC ниже цены (поддержка под нами)<br>" +
+      "• CVD стабильно положительный",
+    waitDescription:
+      "<b>Когда ждать:</b><br>" +
+      "• Цена зажата между EMA21 и EMA50<br>" +
+      "• Bollinger Width сжимается (&lt; 0.08) — перед большим движением, но направление неясно<br>" +
+      "• RSI дивергенция (цена растёт, RSI падает) — разворот<br>" +
+      "• Confidence &lt; 70%<br>" +
+      "• POC прямо над ценой — сопротивление",
     action: {
       BUY: "Свинг-трейдинг. Цель: +2-4%. Стоп: -1.5-2%.",
       SELL: "Свинг-выход. Цель: +2-4%. Стоп: -1.5-2%.",
       WAIT: "Тренд не сформирован. Ждите 4H+.",
     },
     risk: "Средний-Высокий",
+    leverage: "3–5×",
     positionSize: "3-5%",
     stopLoss: "1.5-2%",
     takeProfit: "2-4%",
+    holdTime: "4–24 часа",
+    proTip: "2h — компромисс между скоростью 1h и надёжностью 4h.",
   },
+
   "4h": {
     name: "4 Часа",
     icon: "🕓",
+    tagline: "Среднесрочный • Рекомендуемый профи",
+    description:
+      "<b>Что смотреть в первую очередь:</b> EMA Ribbon + MACD + POC + CVD<br>" +
+      "• <b>Основной TF для профессиональной торговли</b><br>" +
+      "• Все 7 индикаторов работают максимально надёжно<br>" +
+      "• HTF подтверждение от 1d обязательно<br>" +
+      "• Оптимальное R:R (риск/прибыль) — «рабочая лошадка» профи.",
+    entryDescription:
+      "<b>Когда входить («идеальный шторм»):</b><br>" +
+      "1. EMA Ribbon: EMA8 &gt; EMA13 &gt; EMA21 &gt; EMA50 (без пересечений)<br>" +
+      "2. MACD: histogram &gt; 0 и растёт 2+ свечи<br>" +
+      "3. RSI: 45–68 (здоровый бычий диапазон)<br>" +
+      "4. CVD: растёт и положительный (реальные покупки)<br>" +
+      "5. Volume Spike: &gt; 1.3× подтверждает движение<br>" +
+      "6. POC: ниже цены, работает как поддержка<br>" +
+      "7. Bollinger: цена не у верхней границы (есть куда расти)<br>" +
+      "8. HTF (1d): цена выше EMA50 на дневке<br>" +
+      "9. Confidence ≥ 75%",
+    waitDescription:
+      "<b>Когда ждать:</b><br>" +
+      "• RSI &gt; 70 (перекуплен) — не входить в лонг<br>" +
+      "• Bollinger squeeze (&lt; 0.07) — ждать пробоя<br>" +
+      "• Цена у POC сверху — сопротивление<br>" +
+      "• 1d не подтверждает (цена ниже EMA50 на дневке)<br>" +
+      "• Confidence 60–70% — ждать усиления<br>" +
+      "• Новости / FOMC / CPI — ждать 30 мин после релиза",
     action: {
       BUY: "Среднесрочный вход. Цель: +3-6%. Стоп: -2-3%.",
       SELL: "Среднесрочный выход. Цель: +3-6%. Стоп: -2-3%.",
       WAIT: "Нет чёткого тренда. Ждите 1D+.",
     },
     risk: "Средний",
+    leverage: "3–10× (профи: 3–5×)",
     positionSize: "5-10%",
     stopLoss: "2-3%",
     takeProfit: "3-6%",
+    holdTime: "1–7 дней",
+    proTip:
+      "4h — «рабочая лошадка» профи. Меньше шума, чем 1h, больше возможностей, чем 1d.",
   },
+
   "1d": {
     name: "День",
     icon: "🗓",
+    tagline: "Долгосрочный • Низкий риск",
+    description:
+      "<b>Что смотреть в первую очередь:</b> EMA Ribbon + POC + Bollinger<br>" +
+      "• RSI и MACD здесь — вспомогательные<br>" +
+      "• CVD на дневке — сильный сигнал смены тренда<br>" +
+      "• Volume Spike — редкое, но мощное событие<br>" +
+      "• Подходит для позиционной торговли и инвестиций.",
+    entryDescription:
+      "<b>Когда входить:</b><br>" +
+      "• EMA8 &gt; EMA13 &gt; EMA21 &gt; EMA50 (устойчивый бычий тренд)<br>" +
+      "• Цена выше EMA50 более 5 свечей<br>" +
+      "• RSI 50–70 (стабильный бычий диапазон)<br>" +
+      "• POC значительно ниже цены<br>" +
+      "• Volume Spike на прорыве ключевого уровня",
+    waitDescription:
+      "<b>Когда ждать:</b><br>" +
+      "• RSI &lt; 40 на дневке — медвежий рынок<br>" +
+      "• EMA Ribbon «спутан» — глобальная неопределённость<br>" +
+      "• Цена ниже EMA50 — не покупать<br>" +
+      "• Bollinger Width &gt; 0.3 — экстремальная волатильность<br>" +
+      "• F&amp;G &lt; 20 или &gt; 80 — экстрим, возможен разворот",
     action: {
       BUY: "Долгосрочный вход. Цель: +5-15%. Стоп: -3-5%.",
       SELL: "Долгосрочный выход. Цель: +5-15%. Стоп: -3-5%.",
       WAIT: "Глобальный тренд не определён.",
     },
     risk: "Низкий-Средний",
+    leverage: "1–3× (профи: 1–2×)",
     positionSize: "10-20%",
     stopLoss: "3-5%",
     takeProfit: "5-15%",
+    holdTime: "1–8 недель",
+    proTip: "На 1d профи зарабатывают на R:R 3:1+ и терпении, а не на плече.",
   },
 };
 
@@ -907,13 +1022,9 @@ class SignalGenerator {
     this.indicatorCalc = indicatorCalc;
   }
 
-  // ============================================================
-  //  ГЛАВНЫЙ МЕТОД: конфигурируемые веса + автонормировка к 100
-  // ============================================================
   generate(asset, tf, candles) {
-    if (!candles || candles.length < CONFIG.minCandlesRequired) {
+    if (!candles || candles.length < CONFIG.minCandlesRequired)
       return this._emptySignal(asset, tf);
-    }
     const ind = this.indicatorCalc.calculateAll(candles, tf);
     if (!ind) return this._emptySignal(asset, tf);
 
@@ -921,20 +1032,16 @@ class SignalGenerator {
     const sc = CONFIG.scoring;
     const W = sc.weights;
     const G = sc.gradations;
-
-    // Сумма весов для нормировки (динамическая — меняешь weights, нормировка подстроится)
     const totalWeight = Object.values(W).reduce((s, v) => s + v, 0) || 1;
 
-    // Накопители "сырых" баллов (в единицах весов)
-    let buyRaw = 0;
-    let sellRaw = 0;
-    const scores = {}; // нормированные вклады (в % от totalWeight)
+    let buyRaw = 0,
+      sellRaw = 0;
+    const scores = {};
 
-    // ---------- 1. RSI ----------
     {
-      const rsi = ind.rsi;
-      const w = W.rsi;
-      const g = G.rsi;
+      const rsi = ind.rsi,
+        w = W.rsi,
+        g = G.rsi;
       let raw = 0;
       if (rsi < 10) raw = w * g.extreme;
       else if (rsi > 90) raw = -w * g.extreme;
@@ -949,11 +1056,10 @@ class SignalGenerator {
       scores.rsi = (raw / totalWeight) * 100;
     }
 
-    // ---------- 2. MACD ----------
     {
-      const w = W.macd;
-      const g = G.macd;
-      const hist = ind.macdHist;
+      const w = W.macd,
+        g = G.macd,
+        hist = ind.macdHist;
       let raw = 0;
       if (hist > 0 && ind.macdLine > ind.macdSignal) raw = w * g.main;
       else if (hist < 0 && ind.macdLine < ind.macdSignal) raw = -w * g.main;
@@ -964,32 +1070,29 @@ class SignalGenerator {
       scores.macd = (raw / totalWeight) * 100;
     }
 
-    // ---------- 3. EMA Ribbon ----------
     {
-      const w = W.ema;
-      const c = ind.close;
+      const w = W.ema,
+        c = ind.close;
       let raw = 0;
       if (
         c > ind.ema8 &&
         ind.ema8 > ind.ema13 &&
         ind.ema13 > ind.ema21 &&
         ind.ema21 > ind.ema50
-      ) {
+      )
         raw = w;
-      } else if (
+      else if (
         c < ind.ema8 &&
         ind.ema8 < ind.ema13 &&
         ind.ema13 < ind.ema21 &&
         ind.ema21 < ind.ema50
-      ) {
+      )
         raw = -w;
-      }
       if (raw > 0) buyRaw += raw;
       else sellRaw += -raw;
       scores.ema = (raw / totalWeight) * 100;
     }
 
-    // ---------- 4. CVD ----------
     {
       const w = W.cvd;
       let raw = 0;
@@ -1000,11 +1103,10 @@ class SignalGenerator {
       scores.cvd = (raw / totalWeight) * 100;
     }
 
-    // ---------- 5. Bollinger Bands ----------
     {
-      const w = W.bb;
-      const g = G.bb;
-      const c = ind.close;
+      const w = W.bb,
+        g = G.bb,
+        c = ind.close;
       let raw = 0;
       if (c < ind.bbLower) raw = w * g.touch;
       else if (c > ind.bbUpper) raw = -w * g.touch;
@@ -1015,10 +1117,9 @@ class SignalGenerator {
       scores.bb = (raw / totalWeight) * 100;
     }
 
-    // ---------- 6. Volume Spike ----------
     {
-      const w = W.volume;
-      const c = ind.close;
+      const w = W.volume,
+        c = ind.close;
       const volRatio = ind.volume / (ind.volAvg || 1);
       let raw = 0;
       if (volRatio > 1.5 && c > ind.ema8) raw = w;
@@ -1028,10 +1129,9 @@ class SignalGenerator {
       scores.volume = (raw / totalWeight) * 100;
     }
 
-    // ---------- 7. POC ----------
     {
-      const w = W.poc;
-      const c = ind.close;
+      const w = W.poc,
+        c = ind.close;
       const atr = ind.atr || 0.01;
       const pocDist = Math.abs(c - ind.poc) / atr;
       let raw = 0;
@@ -1042,18 +1142,14 @@ class SignalGenerator {
       scores.poc = (raw / totalWeight) * 100;
     }
 
-    // ---------- Итоговая нормировка к 100 ----------
-    const netRaw = buyRaw - sellRaw; // диапазон [-totalWeight, +totalWeight]
-    const netScore = (netRaw / totalWeight) * 100; // → [-100, +100]
+    const netRaw = buyRaw - sellRaw;
+    const netScore = (netRaw / totalWeight) * 100;
     const confidence = Math.round(utils.clamp(Math.abs(netScore), 0, 100));
 
-    // Округление вкладов индикаторов для UI
     const scoresPct = {};
-    for (const k of Object.keys(scores)) {
+    for (const k of Object.keys(scores))
       scoresPct[k] = Math.round(scores[k] * 10) / 10;
-    }
 
-    // ---------- Направление и подтверждения ----------
     const buyAligned = this._isEntryAligned(ind, "BUY");
     const sellAligned = this._isEntryAligned(ind, "SELL");
     const htfBuy = this._htfConfirms(tf, candles, "BUY");
@@ -1111,7 +1207,7 @@ class SignalGenerator {
         trendStrength: ind.trendStrength.toFixed(2),
       },
       actionProbabilities: actionProbs,
-      indicatorScores: scoresPct, // нормированные вклады для UI
+      indicatorScores: scoresPct,
       status: "Активен",
     };
   }
@@ -1168,7 +1264,6 @@ class SignalGenerator {
     return agg;
   }
 
-  // Нормированная версия: принимает сырые buyRaw/sellRaw и totalWeight
   _calcActionProbs(buyRaw, sellRaw, trendStrength, bbWidth, totalWeight) {
     const denom = totalWeight || 1;
     let buyProb = Math.min((buyRaw / denom) * 100, 100);
@@ -1507,12 +1602,10 @@ class FearGreedManager {
   start() {
     this._el.marker = document.getElementById("fngMarker");
     this._el.value = document.getElementById("fngValue");
-
     if (!this._el.marker || !this._el.value) {
       console.warn("⚠️ F&G: элементы #fngMarker / #fngValue не найдены в DOM");
       return;
     }
-
     console.log("🟢 F&G: start() — элементы найдены, запускаю");
     this._set(this.neutralFallback);
     this._fetch();
@@ -1564,7 +1657,6 @@ class FearGreedManager {
         console.warn("⚠️ F&G источник не сработал:", url, e.message);
       }
     }
-
     console.warn(
       "⚠️ F&G: все источники недоступны, оставляю",
       this.neutralFallback,
@@ -1632,9 +1724,7 @@ class MarketStateWidget {
 
     this._onDocClick = (e) => {
       if (!this._isOpen) return;
-      if (this._container && !this._container.contains(e.target)) {
-        this._close();
-      }
+      if (this._container && !this._container.contains(e.target)) this._close();
     };
     this._onKeyDown = (e) => {
       if (e.key === "Escape" && this._isOpen) this._close();
@@ -1674,7 +1764,6 @@ class MarketStateWidget {
   refreshNow() {
     return this._refresh(true);
   }
-
   _toggle() {
     this._isOpen ? this._close() : this._open();
   }
@@ -1922,7 +2011,6 @@ class MarketStateWidget {
     }
     return MACRO_SCALE[MACRO_SCALE.length - 1];
   }
-
   _scoreClass(v) {
     return this._scaleInfo(v).barClass;
   }
@@ -1945,37 +2033,22 @@ class MarketStateWidget {
         <li>20–39 🔴 Риск — Перегрев/паника, лучше в стороне</li>
         <li>0–19 🔴 Экстрим — Кризис, экстремальные условия</li>
       </ul>
-      <p><strong>Важно:</strong> это не сигнал покупать/продавать. Это контекст — фильтр, который говорит «сейчас хорошее время для сделок» или «сейчас всё против вас». Сигнал даёт основной движок (7 индикаторов), а виджет помогает решить, стоит ли вообще торговать сейчас.</p>
-      <p><strong>1. Ликвидность</strong> — это «толщина» рынка. Насколько легко купить или продать актив без сильного движения цены. Чем выше ликвидность — тем больше денег ходит по рынку, тем меньше проскальзывание в сделках, тем стабильнее цены.</p>
-      <p><strong>2. Плечо</strong> — это кредитное плечо, которое используют трейдеры для увеличения потенциальной прибыли. Чем больше плечо — тем больше потенциальная прибыль, но и больше потенциальные потери.</p>
-      <p><strong>3. Широта</strong> — это количество торговых пар, в которых можно торговать активом. Чем больше широта — тем больше возможностей для торговли, но и больше рисков.</p>
-      <p><strong>Правило:</strong> чем выше Macro → тем больше размер позиции и агрессия. Чем ниже → тем меньше и осторожнее.</p>
-      <p><strong>Финальный совет:</strong> используйте виджет не как сигнал, а как фильтр. Он говорит: «сейчас хорошее время торговать» или «лучше не лезть».</p>
+      <p><strong>Важно:</strong> это не сигнал покупать/продавать. Это контекст — фильтр, который говорит «сейчас хорошее время для сделок» или «сейчас всё против вас».</p>
       <h4>ПОКАЗАТЕЛИ СОСТОЯНИЯ РЫНКА</h4>
       <p><strong>1. Funding BTC</strong> — ставка финансирования. Формат: +0.0124%</p>
       <ul>
         <li>🟢 зелёный: −0.05% до +0.05% (здоровый диапазон)</li>
         <li>🔴 красный: вне этого диапазона (перегрев/паника)</li>
       </ul>
-      <p>Как читать: +0.01% — норма. +0.1% — экстрим (все лонги платят грабительские ставки). −0.1% — паника шортов.</p>
       <p><strong>2. Long/Short</strong> — соотношение счетов. Формат: 1.42</p>
       <ul>
         <li>🟢 зелёный: 0.6 – 2.2 (здоровый баланс)</li>
         <li>🔴 красный: &lt; 0.6 или &gt; 2.2 (перекос)</li>
       </ul>
-      <p>Как читать: 1.0 = идеальный баланс. 2.0+ = большинство в лонгах (риск). 0.5 = большинство в шортах (паника).</p>
       <p><strong>3. BTC Dom</strong> — доминирование BTC. Формат: 52.3%</p>
-      <p>Серый цвет (не оценивается как +/-). Как читать: &gt;60% = альтам плохо. 40-50% = альтсезон близко. &lt;40% = альт-эйфория.</p>
       <p><strong>4. MCap 24h</strong> — изменение капитализации за сутки. Формат: +1.2%</p>
-      <ul>
-        <li>🟢 зелёный: положительное</li>
-        <li>🔴 красный: отрицательное</li>
-      </ul>
-      <p>Как читать: ±1% = спокойный день. ±5% = активный день. ±10% = экстрим.</p>
-      <p><strong>5. Объём 24h</strong> — объём торгов за сутки. Формат: $85.3B или $2.1T</p>
-      <p>Нейтральный цвет. Как читать: выше $100B — высокий интерес. Ниже $30B — тонко.</p>
+      <p><strong>5. Объём 24h</strong> — объём торгов за сутки. Формат: $85.3B</p>
       <p><strong>6. Капитализация</strong> — общая капитализация. Формат: $2.4T</p>
-      <p>Нейтральный цвет. Как читать: абсолютная цифра. Важна динамика, а не само значение.</p>
       <p><strong>Итоговый Macro Score = Ликвидность × 0.4 + Плечо × 0.3 + Широта × 0.3</strong></p>
     `;
   }
@@ -2047,13 +2120,9 @@ class MarketStateWidget {
       <div class="ms-row">
         <span class="ms-row-label">${r.label}</span>
         <div class="ms-bar-track">
-          <div class="ms-bar-fill ${this._scoreClass(r.val)}" style="width:${
-            r.val
-          }%"></div>
+          <div class="ms-bar-fill ${this._scoreClass(r.val)}" style="width:${r.val}%"></div>
         </div>
-        <span class="ms-bar-value" style="color:${this._scoreColor(r.val)};">${
-          r.val
-        }</span>
+        <span class="ms-bar-value" style="color:${this._scoreColor(r.val)};">${r.val}</span>
       </div>
     `,
       )
@@ -2074,9 +2143,7 @@ class MarketStateWidget {
           <div class="ms-panel-header">
             <div class="ms-panel-title">Состояние рынка</div>
             <div class="ms-panel-macro">
-              <span class="ms-panel-macro-value" style="color:${
-                macroInfo.color
-              };">${s.macro}</span>
+              <span class="ms-panel-macro-value" style="color:${macroInfo.color};">${s.macro}</span>
               <span class="ms-panel-macro-label">${macroInfo.label}</span>
             </div>
           </div>
@@ -2088,20 +2155,14 @@ class MarketStateWidget {
             <div class="ms-detail"><span>Long/Short</span><span class="ms-detail-val ${lsCls}">${lsRatioStr}</span></div>
             <div class="ms-detail"><span>BTC Dom</span><span class="ms-detail-val">${btcDom}%</span></div>
             <div class="ms-detail"><span>MCap 24h</span><span class="ms-detail-val ${mcapCls}">${mcapChange}%</span></div>
-            <div class="ms-detail"><span>Объём 24h</span><span class="ms-detail-val">$${this._fmtNum(
-              data.totalVolume,
-            )}</span></div>
-            <div class="ms-detail"><span>Капитализация</span><span class="ms-detail-val">$${this._fmtNum(
-              data.totalMcap,
-            )}</span></div>
+            <div class="ms-detail"><span>Объём 24h</span><span class="ms-detail-val">$${this._fmtNum(data.totalVolume)}</span></div>
+            <div class="ms-detail"><span>Капитализация</span><span class="ms-detail-val">$${this._fmtNum(data.totalMcap)}</span></div>
           </div>
 
           <div class="ms-panel-footer">
             <div class="ms-panel-update">
               <span class="ms-dot" id="ms-status-dot"></span>
-              <span id="ms-update-time">${this._fmtTime(
-                data.ts || Date.now(),
-              )}</span>
+              <span id="ms-update-time">${this._fmtTime(data.ts || Date.now())}</span>
             </div>
             <button class="ms-refresh-btn" id="ms-refresh-btn" type="button">↻ Обновить</button>
             <button class="ms-docs-btn" id="ms-docs-btn" type="button">ДОКУМЕНТАЦИЯ<span class="ms-compact-arrow ms-docs-arrow">▼</span>
@@ -2154,25 +2215,22 @@ class MarketStateWidget {
     const docsBtn = this._container.querySelector("#ms-docs-btn");
     const docsClose = this._container.querySelector(".ms-docs-close");
 
-    if (compact) {
+    if (compact)
       compact.addEventListener("click", (e) => {
         e.stopPropagation();
         this._toggle();
       });
-    }
-    if (refreshBtn) {
+    if (refreshBtn)
       refreshBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         this.refreshNow();
       });
-    }
-    if (docsBtn) {
+    if (docsBtn)
       docsBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         this._toggleDocs();
       });
-    }
-    if (docsClose) {
+    if (docsClose)
       docsClose.addEventListener("click", (e) => {
         e.stopPropagation();
         this._isDocsOpen = false;
@@ -2181,7 +2239,6 @@ class MarketStateWidget {
         if (docs) docs.classList.remove("ms-open");
         if (arrow) arrow.classList.remove("ms-open");
       });
-    }
   }
 
   _setStatus(status) {
@@ -2205,39 +2262,24 @@ class MarketStateWidget {
 
 // ============================================================
 //  TF GUIDE PANEL (◂ выпадающая панель с doc-card активного TF)
-//  Логика:
-//   • При смене TF панель ОСТАЁТСЯ открытой (если была открыта),
-//     содержимое просто перерисовывается.
-//   • Закрыть можно: повторным кликом на ◂, кнопкой ✕,
-//     кликом вне панели или Escape.
-//   • Клик по .tf-btn (смена таймфрейма) НЕ закрывает панель.
+//  v10.2: рендер расширенного гайда (description, entry, wait,
+//  leverage, holdTime, proTip)
 // ============================================================
 class TFGuidePanel {
   constructor() {
     this._isOpen = false;
-    this._el = {
-      trigger: null,
-      wrap: null,
-      body: null,
-      closeBtn: null,
-    };
+    this._el = { trigger: null, wrap: null, body: null, closeBtn: null };
     this._currentTF = CONFIG.defaultTF;
 
     this._onDocClick = (e) => {
       if (!this._isOpen) return;
-
       if (this._el.trigger && this._el.trigger.contains(e.target)) return;
-
       const tfBtn = e.target.closest?.(".tf-btn");
       if (tfBtn) return;
-
       if (this._el.closeBtn && this._el.closeBtn.contains(e.target)) return;
-
       if (this._el.wrap && this._el.wrap.contains(e.target)) return;
-
       this.close();
     };
-
     this._onKeyDown = (e) => {
       if (e.key === "Escape" && this._isOpen) this.close();
     };
@@ -2260,7 +2302,6 @@ class TFGuidePanel {
       e.stopPropagation();
       this.toggle();
     });
-
     if (this._el.closeBtn) {
       this._el.closeBtn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -2285,34 +2326,87 @@ class TFGuidePanel {
   toggle() {
     this._isOpen ? this.close() : this.open();
   }
-
   open() {
     this._isOpen = true;
     this._el.wrap?.classList.add("ms-open");
     this._el.trigger?.classList.add("active");
   }
-
   close() {
     this._isOpen = false;
     this._el.wrap?.classList.remove("ms-open");
     this._el.trigger?.classList.remove("active");
   }
 
+  // ---------- РЕНДЕР РАСШИРЕННОЙ КАРТОЧКИ ----------
   _renderCard(tf) {
-    const guide = TF_GUIDES[tf];
-    if (!guide || !this._el.body) return;
+    const g = TF_GUIDES[tf];
+    if (!g || !this._el.body) return;
+
     this._el.body.innerHTML = `
-      <div class="doc-card" data-tf="${tf}">
-        <div class="tf-name">${guide.icon} ${guide.name}</div>
-        <div style="margin:4px 0; font-size:11px;"><span class="action-buy"><span style="color:#00ff00;">▲</span> BUY:</span> ${guide.action.BUY}</div>
-        <div style="margin:4px 0; font-size:11px;"><span class="action-sell"><span style="color:red;">▼</span> SELL:</span> ${guide.action.SELL}</div>
-        <div style="margin:4px 0; font-size:11px;"><span class="action-wait">⏸️ WAIT:</span> ${guide.action.WAIT}</div>
-        <div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.05);">
-          <div><span class="risk-label">Риск:</span> <span class="risk-value">${guide.risk}</span></div>
-          <div><span class="risk-label">Размер:</span> <span class="risk-value">${guide.positionSize}</span></div>
-          <div><span class="risk-label">Стоп:</span> <span class="risk-value" style="color:#f87171;">${guide.stopLoss}</span></div>
-          <div><span class="risk-label">Профит:</span> <span class="risk-value" style="color:#34d399;">${guide.takeProfit}</span></div>
+      <div class="doc-card doc-card-extended" data-tf="${tf}">
+        <div class="tf-name">${g.icon} ${g.name}</div>
+        ${g.tagline ? `<div class="tf-tagline">${g.tagline}</div>` : ""}
+
+        ${
+          g.description
+            ? `
+          <div class="doc-section doc-section-desc">
+            ${g.description}
+          </div>
+        `
+            : ""
+        }
+
+        ${
+          g.entryDescription
+            ? `
+          <div class="doc-section doc-section-entry">
+            ${g.entryDescription}
+          </div>
+        `
+            : ""
+        }
+
+        ${
+          g.waitDescription
+            ? `
+          <div class="doc-section doc-section-wait">
+            ${g.waitDescription}
+          </div>
+        `
+            : ""
+        }
+
+        <div class="doc-section doc-section-actions">
+          <div style="margin:4px 0; font-size:11px;">
+            <span class="action-buy"><span style="color:#00ff00;">▲</span> BUY:</span> ${g.action.BUY}
+          </div>
+          <div style="margin:4px 0; font-size:11px;">
+            <span class="action-sell"><span style="color:red;">▼</span> SELL:</span> ${g.action.SELL}
+          </div>
+          <div style="margin:4px 0; font-size:11px;">
+            <span class="action-wait">⏸️ WAIT:</span> ${g.action.WAIT}
+          </div>
         </div>
+
+        <div class="doc-section doc-section-params">
+          <div><span class="risk-label">Риск:</span> <span class="risk-value">${g.risk}</span></div>
+          <div><span class="risk-label">Плечо:</span> <span class="risk-value" style="color:#fbbf24;">${g.leverage}</span></div>
+          <div><span class="risk-label">Размер:</span> <span class="risk-value">${g.positionSize}</span></div>
+          <div><span class="risk-label">Стоп:</span> <span class="risk-value" style="color:#f87171;">${g.stopLoss}</span></div>
+          <div><span class="risk-label">Профит:</span> <span class="risk-value" style="color:#34d399;">${g.takeProfit}</span></div>
+          ${g.holdTime ? `<div><span class="risk-label">Удержание:</span> <span class="risk-value">${g.holdTime}</span></div>` : ""}
+        </div>
+
+        ${
+          g.proTip
+            ? `
+          <div class="doc-section doc-section-tip">
+            💡 <b>Совет профи:</b> ${g.proTip}
+          </div>
+        `
+            : ""
+        }
       </div>
     `;
   }
@@ -2356,228 +2450,228 @@ class UIRenderer {
     const assetCards = CONFIG.assets
       .map(
         (asset) => `
-            <div class="signal-card neutral" data-asset="${asset}">
-                <div class="signal-strength-badge"></div>
-                <div class="card-header">
-                    <span class="asset-name">${this._displayName(asset)}</span>
-                    <span class="asset-price">--</span>
-                </div>
-                <div class="card-body">
-                    <span class="signal-direction">⏳ Ожидание</span>
-                    <span class="signal-confidence">--%</span>
-                </div>
-                <div class="indicators-grid">
-                    ${["rsi", "macd", "ema", "cvd", "bb", "volume", "poc"]
-                      .map(
-                        (ind) => `
-                        <div class="indicator-item" data-indicator="${ind}">
-                            <span class="ind-label">${this._indLabel(
-                              ind,
-                            )}</span>
-                            <div class="indicator-bar-wrap">
-                                <div class="indicator-bar-fill neutral" style="width:0%"></div>
-                            </div>
-                            <span class="ind-value neutral">--</span>
-                        </div>
-                    `,
-                      )
-                      .join("")}
-                </div>
-                <div class="action-indicators">
-                    <div class="action-indicator wait" data-action="wait">
-                        <span class="label">⏸️ Ждать</span>
-                        <span class="value">0%</span>
-                        <div class="bar-bg"><div class="bar-fill" style="width:0%"></div></div>
-                    </div>
-                    <div class="action-indicator buy" data-action="buy">
-                        <span class="label"><span style="color:#00ff00;">▲</span> Купить</span>
-                        <span class="value">0%</span>
-                        <div class="bar-bg"><div class="bar-fill" style="width:0%"></div></div>
-                    </div>
-                    <div class="action-indicator sell" data-action="sell">
-                        <span class="label">🔻 Продать</span>
-                        <span class="value">0%</span>
-                        <div class="bar-bg"><div class="bar-fill" style="width:0%"></div></div>
-                    </div>
-                </div>
-                <div class="card-footer">
-                    <span class="tf-signal">--</span>
-                </div>
-            </div>
-        `,
+      <div class="signal-card neutral" data-asset="${asset}">
+          <div class="signal-strength-badge"></div>
+          <div class="card-header">
+              <span class="asset-name">${this._displayName(asset)}</span>
+              <span class="asset-price">--</span>
+          </div>
+          <div class="card-body">
+              <span class="signal-direction">⏳ Ожидание</span>
+              <span class="signal-confidence">--%</span>
+          </div>
+          <div class="indicators-grid">
+              ${["rsi", "macd", "ema", "cvd", "bb", "volume", "poc"]
+                .map(
+                  (ind) => `
+                  <div class="indicator-item" data-indicator="${ind}">
+                      <span class="ind-label">${this._indLabel(ind)}</span>
+                      <div class="indicator-bar-wrap">
+                          <div class="indicator-bar-fill neutral" style="width:0%"></div>
+                      </div>
+                      <span class="ind-value neutral">--</span>
+                  </div>
+              `,
+                )
+                .join("")}
+          </div>
+          <div class="action-indicators">
+              <div class="action-indicator wait" data-action="wait">
+                  <span class="label">⏸️ Ждать</span>
+                  <span class="value">0%</span>
+                  <div class="bar-bg"><div class="bar-fill" style="width:0%"></div></div>
+              </div>
+              <div class="action-indicator buy" data-action="buy">
+                  <span class="label"><span style="color:#00ff00;">▲</span> Купить</span>
+                  <span class="value">0%</span>
+                  <div class="bar-bg"><div class="bar-fill" style="width:0%"></div></div>
+              </div>
+              <div class="action-indicator sell" data-action="sell">
+                  <span class="label">🔻 Продать</span>
+                  <span class="value">0%</span>
+                  <div class="bar-bg"><div class="bar-fill" style="width:0%"></div></div>
+              </div>
+          </div>
+          <div class="card-footer">
+              <span class="tf-signal">--</span>
+          </div>
+      </div>
+    `,
       )
       .join("");
 
     return `
-            <div class="crypto-signal-widget">
-                <div class="widget-header">
-                    <div>
-                        <span class="widget-title">⚛ CRYPTO SIGNAL TOOL ⚛</span>
-                        <span class="widget-version"><b>v10.1</b> • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin) •</span>
-                    </div>
-                    <div class="widget-status-group">
-                        <div class="sound-controls">
-                            <button class="sound-toggle active" id="sound-toggle">
-                                🔊 <span class="sound-label">Вкл</span>
-                            </button>
-                            <span class="sound-status" id="sound-status">
-                                <span class="sound-indicator on"></span>
-                            </span>
-                            <span class="sound-info">Звук при ≥75%</span>
-                        </div>
-                        <div class="ws-status-group">
-                          <span class="ws-status" id="ws-status">⚡ Подключение...</span>
-                          <span class="last-update" id="last-update">--:--:--</span>
-                        </div>
-                    </div>
-                </div>
+      <div class="crypto-signal-widget">
+          <div class="widget-header">
+              <div>
+                  <span class="widget-title">⚛ CRYPTO SIGNAL TOOL ⚛</span>
+                  <span class="widget-version"><b>v10.2</b> • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin) •</span>
+              </div>
+              <div class="widget-status-group">
+                  <div class="sound-controls">
+                      <button class="sound-toggle active" id="sound-toggle">
+                          🔊 <span class="sound-label">Вкл</span>
+                      </button>
+                      <span class="sound-status" id="sound-status">
+                          <span class="sound-indicator on"></span>
+                      </span>
+                      <span class="sound-info">Звук при ≥75%</span>
+                  </div>
+                  <div class="ws-status-group">
+                    <span class="ws-status" id="ws-status">⚡ Подключение...</span>
+                    <span class="last-update" id="last-update">--:--:--</span>
+                  </div>
+              </div>
+          </div>
 
-                <div class="tf-group" id="tf-group">
-                    <div class="tf-arrow-wrap">
-                        <button class="tf-arrow" type="button" data-tf="◂">◂</button>
-                        <div class="tf-guide-panel" id="tf-guide-panel">
-                            <div class="tf-guide-panel-header">
-                                <span>ГАЙД ТАЙМФРЕЙМА</span>
-                                <button class="tf-guide-panel-close" type="button" title="Закрыть">✕</button>
-                            </div>
-                            <div class="tf-guide-panel-body" id="tf-guide-body"></div>
-                        </div>
-                    </div>
-                    ${CONFIG.timeframes
-                      .map(
-                        (tf) =>
-                          `<button class="tf-btn ${
-                            tf === CONFIG.defaultTF ? "active" : ""
-                          }" data-tf="${tf}">${tf}</button>`,
-                      )
-                      .join("")}
-                    <div class="signal-count-item">⚡ <span id="signal-count">0</span> сигналов</div>
+          <div class="tf-group" id="tf-group">
+              <div class="tf-arrow-wrap">
+                  <button class="tf-arrow" type="button" data-tf="◂">◂</button>
+                  <div class="tf-guide-panel" id="tf-guide-panel">
+                      <div class="tf-guide-panel-header">
+                          <span>ГАЙД ТАЙМФРЕЙМА</span>
+                          <button class="tf-guide-panel-close" type="button" title="Закрыть">✕</button>
+                      </div>
+                      <div class="tf-guide-panel-body" id="tf-guide-body"></div>
+                  </div>
+              </div>
+              ${CONFIG.timeframes.map((tf) => `<button class="tf-btn ${tf === CONFIG.defaultTF ? "active" : ""}" data-tf="${tf}">${tf}</button>`).join("")}
+              <div class="signal-count-item">⚡ <span id="signal-count">0</span> сигналов</div>
 
-                    <!-- === Fear & Greed === -->
-                    <div class="fng-widget" id="fngWidget" title="Crypto Fear & Greed Index">
-                        <span class="fng-label">СТРАХ & ЖАДНОСТЬ</span>
-                        <div class="fng-track">
-                            <div class="fng-marker" id="fngMarker"></div>
-                        </div>
-                        <span class="fng-value" id="fngValue">50 Neutral</span>
-                    </div>
+              <div class="fng-widget" id="fngWidget" title="Crypto Fear & Greed Index">
+                  <span class="fng-label">СТРАХ & ЖАДНОСТЬ</span>
+                  <div class="fng-track">
+                      <div class="fng-marker" id="fngMarker"></div>
+                  </div>
+                  <span class="fng-value" id="fngValue">50 Neutral</span>
+              </div>
 
-                    <!-- === Market State Widget (Macro Heatmap) === -->
-                    <div class="ms-inline-slot">
-                        <div id="market-state-widget"></div>
-                    </div>
-                </div>
+              <div class="ms-inline-slot">
+                  <div id="market-state-widget"></div>
+              </div>
+          </div>
 
-                <div class="signal-grid" id="signal-grid">
-                    ${assetCards}
-                </div>
+          <div class="signal-grid" id="signal-grid">
+              ${assetCards}
+          </div>
 
-                <div class="trade-history-section">
-                    <div class="trade-history-header">
-                        <div class="trade-history-title">ИСТОРИЯ ТОРГОВЛИ (backtesting) стратегии на исторических данных. Виджет симулирует торговлю, используя те же самые 7 индикаторов, и показывает, как бы вы заработали или потеряли деньги, если бы следовали сигналам в прошлом.</div>
-                        <div class="trade-history-stats" id="trade-stats">
-                            <div class="stat-item">Всего: <span class="stat-value total" id="stat-total">0</span></div>
-                            <div class="stat-item">Win: <span class="stat-value win" id="stat-wins">0</span></div>
-                            <div class="stat-item">Loss: <span class="stat-value loss" id="stat-losses">0</span></div>
-                            <div class="stat-item">Win Rate: <span class="stat-value" id="stat-winrate" style="color:#fbbf24;">0%</span></div>
-                            <div class="stat-item">P/L: <span class="stat-value" id="stat-pl" style="color:#94a3b8;">$0</span></div>
-                        </div>
-                    </div>
-                    <div class="trade-history-grid" id="trade-history-grid">
-                        <div style="grid-column:1/-1; text-align:center; color:#475569; font-size:12px; padding:20px;">⏳ Загрузка исторических данных...</div>
-                    </div>
-                </div>
+          <div class="trade-history-section">
+              <div class="trade-history-header">
+                  <div class="trade-history-title">ИСТОРИЯ ТОРГОВЛИ (backtesting) стратегии на исторических данных. Виджет симулирует торговлю, используя те же самые 7 индикаторов, и показывает, как бы вы заработали или потеряли деньги, если бы следовали сигналам в прошлом.</div>
+                  <div class="trade-history-stats" id="trade-stats">
+                      <div class="stat-item">Всего: <span class="stat-value total" id="stat-total">0</span></div>
+                      <div class="stat-item">Win: <span class="stat-value win" id="stat-wins">0</span></div>
+                      <div class="stat-item">Loss: <span class="stat-value loss" id="stat-losses">0</span></div>
+                      <div class="stat-item">Win Rate: <span class="stat-value" id="stat-winrate" style="color:#fbbf24;">0%</span></div>
+                      <div class="stat-item">P/L: <span class="stat-value" id="stat-pl" style="color:#94a3b8;">$0</span></div>
+                  </div>
+              </div>
+              <div class="trade-history-grid" id="trade-history-grid">
+                  <div style="grid-column:1/-1; text-align:center; color:#475569; font-size:12px; padding:20px;">⏳ Загрузка исторических данных...</div>
+              </div>
+          </div>
 
-                <div class="widget-footer">
-                    <div class="footer-stat">🎯 >75% Сильный</div>
-                    <div class="footer-stat">💾 <span id="cache-status">Кэш</span></div>
-                    <div class="footer-stat"><span id="connection-info">WebSocket</span></div>
-                    <div class="footer-stat"><span id="history-status">История</span></div>
-                    <div class="footer-stat">⚡<span id="asset-count">${
-                      CONFIG.assets.length
-                    } активов</span></div>
-                </div>
+          <div class="widget-footer">
+              <div class="footer-stat">🎯 >75% Сильный</div>
+              <div class="footer-stat">💾 <span id="cache-status">Кэш</span></div>
+              <div class="footer-stat"><span id="connection-info">WebSocket</span></div>
+              <div class="footer-stat"><span id="history-status">История</span></div>
+              <div class="footer-stat">⚡<span id="asset-count">${CONFIG.assets.length} активов</span></div>
+          </div>
 
-                <div class="docs-wrapper">
-                    <details>
-                        <summary>ДОКУМЕНТАЦИЯ</summary>
-                        <div class="docs-content">
-                            ${this._buildDocs()}
-                        </div>
-                    </details>
-                </div>
-            </div>
-        `;
+          <div class="docs-wrapper">
+              <details>
+                  <summary>ДОКУМЕНТАЦИЯ</summary>
+                  <div class="docs-content">
+                      ${this._buildDocs()}
+                  </div>
+              </details>
+          </div>
+      </div>
+    `;
   }
 
+  // ---------- ОБНОВЛЁННАЯ ДОКУМЕНТАЦИЯ С РАСШИРЕННЫМИ ГАЙДАМИ ----------
   _buildDocs() {
     const w = CONFIG.scoring.weights;
     const totalW = Object.values(w).reduce((s, v) => s + v, 0) || 1;
     const pct = (k) => Math.round((w[k] / totalW) * 100);
 
+    const cards = CONFIG.timeframes
+      .map((tf) => {
+        const g = TF_GUIDES[tf];
+        if (!g) return "";
+        return `
+        <div class="doc-card doc-card-extended" data-tf="${tf}">
+          <div class="tf-name">${g.icon} ${g.name}</div>
+          ${g.tagline ? `<div class="tf-tagline">${g.tagline}</div>` : ""}
+
+          ${g.description ? `<div class="doc-section doc-section-desc">${g.description}</div>` : ""}
+          ${g.entryDescription ? `<div class="doc-section doc-section-entry">${g.entryDescription}</div>` : ""}
+          ${g.waitDescription ? `<div class="doc-section doc-section-wait">${g.waitDescription}</div>` : ""}
+
+          <div class="doc-section doc-section-actions">
+            <div style="margin:4px 0; font-size:11px;"><span class="action-buy"><span style="color:#00ff00;">▲</span> BUY:</span> ${g.action.BUY}</div>
+            <div style="margin:4px 0; font-size:11px;"><span class="action-sell">🔻 SELL:</span> ${g.action.SELL}</div>
+            <div style="margin:4px 0; font-size:11px;"><span class="action-wait">⏸️ WAIT:</span> ${g.action.WAIT}</div>
+          </div>
+
+          <div class="doc-section doc-section-params">
+            <div><span class="risk-label">Риск:</span> <span class="risk-value">${g.risk}</span></div>
+            <div><span class="risk-label">Плечо:</span> <span class="risk-value" style="color:#fbbf24;">${g.leverage}</span></div>
+            <div><span class="risk-label">Размер:</span> <span class="risk-value">${g.positionSize}</span></div>
+            <div><span class="risk-label">Стоп:</span> <span class="risk-value" style="color:#f87171;">${g.stopLoss}</span></div>
+            <div><span class="risk-label">Профит:</span> <span class="risk-value" style="color:#34d399;">${g.takeProfit}</span></div>
+            ${g.holdTime ? `<div><span class="risk-label">Удержание:</span> <span class="risk-value">${g.holdTime}</span></div>` : ""}
+          </div>
+
+          ${g.proTip ? `<div class="doc-section doc-section-tip">💡 <b>Совет профи:</b> ${g.proTip}</div>` : ""}
+        </div>
+      `;
+      })
+      .join("");
+
     return `
-            <div class="doc-grid">
-                ${CONFIG.timeframes
-                  .map((tf) => {
-                    const guide = TF_GUIDES[tf];
-                    if (!guide) return "";
-                    return `
-                        <div class="doc-card" data-tf="${tf}">
-                            <div class="tf-name">${guide.icon} ${guide.name}</div>
-                            <div style="margin:4px 0; font-size:11px;"><span class="action-buy"><span style="color:#00ff00;">▲</span> BUY:</span> ${guide.action.BUY}</div>
-                            <div style="margin:4px 0; font-size:11px;"><span class="action-sell">🔻 SELL:</span> ${guide.action.SELL}</div>
-                            <div style="margin:4px 0; font-size:11px;"><span class="action-wait">⏸️ WAIT:</span> ${guide.action.WAIT}</div>
-                            <div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.05);">
-                                <div><span class="risk-label">Риск:</span> <span class="risk-value">${guide.risk}</span></div>
-                                <div><span class="risk-label">Размер:</span> <span class="risk-value">${guide.positionSize}</span></div>
-                                <div><span class="risk-label">Стоп:</span> <span class="risk-value" style="color:#f87171;">${guide.stopLoss}</span></div>
-                                <div><span class="risk-label">Профит:</span> <span class="risk-value" style="color:#34d399;">${guide.takeProfit}</span></div>
-                            </div>
-                        </div>
-                    `;
-                  })
-                  .join("")}
-            </div>
-            <div class="doc-legend">
-                <span class="legend-item"><span class="legend-dot buy-dot"></span> BUY</span>
-                <span class="legend-item"><span class="legend-dot sell-dot"></span> SELL</span>
-                <span class="legend-item"><span class="legend-dot wait-dot"></span> WAIT</span>
-                <span class="legend-item"><span class="legend-dot strong-dot"></span> Strong (>75%)</span>
-                <span class="legend-item" style="color:#fbbf24;">🔊 Звук при ≥75%</span>
-                <span class="legend-item">⚠️ Риск-менеджмент обязателен! ⚠️</span>
-            </div>
-            <div style="margin-top:8px; padding:8px 12px; background:rgba(255,255,255,0.03); border-radius:8px; font-size:11px; color:#94a3b8;">
-                <strong style="color:#e2e8f0;">📌 Общие правила:</strong><br>
-                • Используйте 4H как основной таймфрейм для входа<br>
-                • 1H и 2H — для уточнения точек входа<br>
-                • 15m — только для скальпинга (опытные трейдеры)<br>
-                • 1D — для долгосрочных инвестиций<br>
-                • ≥75% — сильный сигнал (звук, можно входить)<br>
-                • 60-74% — средний сигнал (можно входить, но с осторожностью, подтверждение HTF обязательно)<br>
-                • <60% — шум, игнорируем<br>
-                • Всегда используйте стоп-лосс!<br>
-                • Не рискуйте более 2-3% депозита на одну сделку<br>
-                • Диверсифицируйте активы (не более 30% в один актив)
-            </div>
-            <br>
-            <span>Данное приложение — это мощный инструмент для принятия торговых решений, но не гарантия прибыли. Это профессиональный торговый терминал для криптовалют, который объединяет 7 лучших технических индикаторов в единую систему генерации сигналов. Приложение работает в реальном времени, анализируя данные с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin)</span>
-            <br><br>
-            <span>РАСШИФРОВКА 7 ИНДИКАТОРОВ (веса настраиваются в CONFIG.scoring.weights, итог автонормируется к 100%)<br>
-              1. RSI — вес ${w.rsi} → ${pct("rsi")}%<br>
-              2. MACD — вес ${w.macd} → ${pct("macd")}%<br>
-              3. EMA Ribbon — вес ${w.ema} → ${pct("ema")}%<br>
-              4. CVD — вес ${w.cvd} → ${pct("cvd")}%<br>
-              5. Bollinger Bands — вес ${w.bb} → ${pct("bb")}%<br>
-              6. Volume Spike — вес ${w.volume} → ${pct("volume")}%<br>
-              7. POC — вес ${w.poc} → ${pct("poc")}%<br>
-              <em style="color:#64748b;">Сумма сырых весов: ${totalW} (нормируется автоматически).</em>
-            </span>
-            <br>
-            <span>
-                <strong>МЕРЦАНИЕ</strong><br>
-                60-64% Слабая • 65-69% Средняя • 70-74% Сильная • 75-79% Очень сильная • 80%+ Экстремальная
-            </span>
-        `;
+      <div class="doc-grid">
+        ${cards}
+      </div>
+      <div class="doc-legend">
+          <span class="legend-item"><span class="legend-dot buy-dot"></span> BUY</span>
+          <span class="legend-item"><span class="legend-dot sell-dot"></span> SELL</span>
+          <span class="legend-item"><span class="legend-dot wait-dot"></span> WAIT</span>
+          <span class="legend-item"><span class="legend-dot strong-dot"></span> Strong (>75%)</span>
+          <span class="legend-item" style="color:#fbbf24;">🔊 Звук при ≥75%</span>
+          <span class="legend-item">⚠️ Риск-менеджмент обязателен! ⚠️</span>
+      </div>
+      <div style="margin-top:8px; padding:8px 12px; background:rgba(255,255,255,0.03); border-radius:8px; font-size:11px; color:#94a3b8;">
+          <strong style="color:#e2e8f0;">📌 Общие правила:</strong><br>
+          • Используйте 4H как основной таймфрейм для входа<br>
+          • 1H и 2H — для уточнения точек входа<br>
+          • 15m — только для скальпинга (опытные трейдеры)<br>
+          • 1D — для долгосрочных инвестиций<br>
+          • Всегда используйте стоп-лосс!<br>
+          • Не рискуйте более 2-3% депозита на одну сделку<br>
+          • Диверсифицируйте активы (не более 30% в один актив)
+      </div>
+      <br>
+      <span>Данное приложение — это мощный инструмент для принятия торговых решений, но не гарантия прибыли. Это профессиональный торговый терминал для криптовалют, который объединяет 7 лучших технических индикаторов в единую систему генерации сигналов. Приложение работает в реальном времени, анализируя данные с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin)</span>
+      <br><br>
+      <span>РАСШИФРОВКА 7 ИНДИКАТОРОВ (веса настраиваются в CONFIG.scoring.weights, итог автонормируется к 100%)<br>
+        1. RSI — вес ${w.rsi} → ${pct("rsi")}%<br>
+        2. MACD — вес ${w.macd} → ${pct("macd")}%<br>
+        3. EMA Ribbon — вес ${w.ema} → ${pct("ema")}%<br>
+        4. CVD — вес ${w.cvd} → ${pct("cvd")}%<br>
+        5. Bollinger Bands — вес ${w.bb} → ${pct("bb")}%<br>
+        6. Volume Spike — вес ${w.volume} → ${pct("volume")}%<br>
+        7. POC — вес ${w.poc} → ${pct("poc")}%<br>
+        <em style="color:#64748b;">Сумма сырых весов: ${totalW} (нормируется автоматически).</em>
+      </span>
+      <br>
+      <span>
+          <strong>МЕРЦАНИЕ</strong><br>
+          60-64% Слабая • 65-69% Средняя • 70-74% Сильная • 75-79% Очень сильная • 80%+ Экстремальная
+      </span>
+    `;
   }
 
   _displayName(asset) {
@@ -2640,17 +2734,10 @@ class UIRenderer {
       this.el.soundToggle.addEventListener("click", () => {
         if (this.soundManager) {
           const enabled = this.soundManager.toggle();
-          this.el.soundToggle.className = `sound-toggle ${
-            enabled ? "active" : "muted"
-          }`;
-          this.el.soundToggle.innerHTML = `${
-            enabled ? "🔊" : "🔇"
-          }<span class="sound-label">${enabled ? "Вкл" : "Выкл"}</span>`;
-          if (this.el.soundStatusFooter) {
-            this.el.soundStatusFooter.textContent = `Звук: ${
-              enabled ? "Вкл" : "Выкл"
-            }`;
-          }
+          this.el.soundToggle.className = `sound-toggle ${enabled ? "active" : "muted"}`;
+          this.el.soundToggle.innerHTML = `${enabled ? "🔊" : "🔇"}<span class="sound-label">${enabled ? "Вкл" : "Выкл"}</span>`;
+          if (this.el.soundStatusFooter)
+            this.el.soundStatusFooter.textContent = `Звук: ${enabled ? "Вкл" : "Выкл"}`;
         }
       });
     }
@@ -2716,9 +2803,8 @@ class UIRenderer {
     this._updateBadgeAndGlow(card, displayDir, signal.confidence);
 
     const tfEl = card.querySelector(".tf-signal");
-    if (tfEl && signal.indicators) {
+    if (tfEl && signal.indicators)
       tfEl.textContent = `RSI:${signal.indicators.rsi} | MACD:${signal.indicators.macd}`;
-    }
 
     if (
       this.soundManager &&
@@ -2751,8 +2837,6 @@ class UIRenderer {
       const barFill = item.querySelector(".indicator-bar-fill");
       if (!valueEl || !barFill) return;
 
-      // scores теперь в диапазоне примерно [-50%, +50%] (нормированные).
-      // Масштабируем для UI: 20 → 100%.
       let direction = "neutral",
         display = "0%";
       if (score > 0) {
@@ -2768,13 +2852,7 @@ class UIRenderer {
       valueEl.className = `ind-value ${direction}`;
       const barPercent = Math.min((Math.abs(score) / 20) * 100, 100);
       barFill.style.width = `${barPercent}%`;
-      barFill.className = `indicator-bar-fill ${
-        direction.includes("bullish")
-          ? "bullish"
-          : direction.includes("bearish")
-            ? "bearish"
-            : "neutral"
-      }`;
+      barFill.className = `indicator-bar-fill ${direction.includes("bullish") ? "bullish" : direction.includes("bearish") ? "bearish" : "neutral"}`;
     });
   }
 
@@ -2881,47 +2959,27 @@ class UIRenderer {
         });
         const assetName = this._displayName(t.asset) || t.asset;
         return `
-                <div class="trade-card">
-                    <div class="trade-info">
-                        <div class="trade-asset">${assetName}</div>
-                        <div class="trade-detail">
-                            <span class="trade-direction-badge ${badgeCls}">${dirLabel}</span>
-                            <span style="color:#475569; margin-left:6px;">conf: ${
-                              t.confidence
-                            }%</span>
-                        </div>
-                        <div class="trade-detail">Entry: $${t.entryPrice.toFixed(
-                          2,
-                        )} → Exit: $${t.exitPrice.toFixed(2)}</div>
-                        <div class="trade-time">${date}</div>
-                    </div>
-                    <div class="trade-result">
-                        <div class="trade-profit ${
-                          isWin ? "positive" : "negative"
-                        }">${profitStr}</div>
-                        <div style="font-size:10px; color:#64748b;">${
-                          (t.profitPercent >= 0 ? "+" : "") +
-                          t.profitPercent.toFixed(2)
-                        }%</div>
-                        <div style="font-size:8px; color:#475569; margin-top:2px;">${
-                          t.exitReason === "take_profit"
-                            ? "✅ TP"
-                            : t.exitReason === "stop_loss"
-                              ? "🛑 SL"
-                              : t.exitReason === "reverse_signal"
-                                ? "🔄 REV"
-                                : "⏱️ TO"
-                        }</div>
-                    </div>
-                </div>
-            `;
+        <div class="trade-card">
+          <div class="trade-info">
+            <div class="trade-asset">${assetName}</div>
+            <div class="trade-detail">
+              <span class="trade-direction-badge ${badgeCls}">${dirLabel}</span>
+              <span style="color:#475569; margin-left:6px;">conf: ${t.confidence}%</span>
+            </div>
+            <div class="trade-detail">Entry: $${t.entryPrice.toFixed(2)} → Exit: $${t.exitPrice.toFixed(2)}</div>
+            <div class="trade-time">${date}</div>
+          </div>
+          <div class="trade-result">
+            <div class="trade-profit ${isWin ? "positive" : "negative"}">${profitStr}</div>
+            <div style="font-size:10px; color:#64748b;">${(t.profitPercent >= 0 ? "+" : "") + t.profitPercent.toFixed(2)}%</div>
+            <div style="font-size:8px; color:#475569; margin-top:2px;">${t.exitReason === "take_profit" ? "✅ TP" : t.exitReason === "stop_loss" ? "🛑 SL" : t.exitReason === "reverse_signal" ? "🔄 REV" : "⏱️ TO"}</div>
+          </div>
+        </div>
+      `;
       })
       .join("");
-    if (trades.length > 20) {
-      grid.innerHTML += `<div style="grid-column:1/-1; text-align:center; color:#475569; font-size:11px; padding:8px;">+ ${
-        trades.length - 20
-      } more...</div>`;
-    }
+    if (trades.length > 20)
+      grid.innerHTML += `<div style="grid-column:1/-1; text-align:center; color:#475569; font-size:11px; padding:8px;">+ ${trades.length - 20} more...</div>`;
   }
 
   _updateStatsUI() {
