@@ -131,7 +131,7 @@ const TF_GUIDES = {
   },
   "1h": {
     name: "1 Час",
-    icon: "📊",
+    icon: "🕒",
     action: {
       BUY: "Стандартный вход. Цель: +1-3%. Стоп: -1-1.5%.",
       SELL: "Стандартный выход. Цель: +1-3%. Стоп: -1-1.5%.",
@@ -144,7 +144,7 @@ const TF_GUIDES = {
   },
   "2h": {
     name: "2 Часа",
-    icon: "📈",
+    icon: "🕒",
     action: {
       BUY: "Свинг-трейдинг. Цель: +2-4%. Стоп: -1.5-2%.",
       SELL: "Свинг-выход. Цель: +2-4%. Стоп: -1.5-2%.",
@@ -157,7 +157,7 @@ const TF_GUIDES = {
   },
   "4h": {
     name: "4 Часа",
-    icon: "📉",
+    icon: "🕒",
     action: {
       BUY: "Среднесрочный вход. Цель: +3-6%. Стоп: -2-3%.",
       SELL: "Среднесрочный выход. Цель: +3-6%. Стоп: -2-3%.",
@@ -170,7 +170,7 @@ const TF_GUIDES = {
   },
   "1d": {
     name: "1 День",
-    icon: "🏛️",
+    icon: "🗓",
     action: {
       BUY: "Долгосрочный вход. Цель: +5-15%. Стоп: -3-5%.",
       SELL: "Долгосрочный выход. Цель: +5-15%. Стоп: -3-5%.",
@@ -2669,11 +2669,11 @@ class UIRenderer {
         color = "#94a3b8",
         bg = "rgba(255,255,255,0.05)";
       if (displayDir === "BUY") {
-        icon = "📈";
+        icon = "🟢";
         color = "#34d399";
         bg = "rgba(52,211,153,0.15)";
       } else if (displayDir === "SELL") {
-        icon = "📉";
+        icon = "🔻";
         color = "#f87171";
         bg = "rgba(248,113,113,0.15)";
       }
@@ -2809,15 +2809,15 @@ class UIRenderer {
       badgeClass = isBuy ? "buy-strong" : "sell-strong";
     } else if (confidence >= 70) {
       signalClass = isBuy ? "buy-70" : "sell-70";
-      badgeText = isBuy ? "📈 BUY 70%+" : "📉 SELL 70%+";
+      badgeText = isBuy ? "🟢 BUY 70%+" : "🔻 SELL 70%+";
       badgeClass = isBuy ? "buy" : "sell";
     } else if (confidence >= 65) {
       signalClass = isBuy ? "buy-65" : "sell-65";
-      badgeText = isBuy ? "📈 BUY 65%+" : "📉 SELL 65%+";
+      badgeText = isBuy ? "🟢 BUY 65%+" : "🔻 SELL 65%+";
       badgeClass = isBuy ? "buy" : "sell";
     } else {
       signalClass = isBuy ? "buy-60" : "sell-60";
-      badgeText = isBuy ? "📈 BUY 60%+" : "📉 SELL 60%+";
+      badgeText = isBuy ? "🟢 BUY 60%+" : "🔻 SELL 60%+";
       badgeClass = isBuy ? "buy" : "sell";
     }
     card.classList.add(signalClass);
@@ -2854,7 +2854,7 @@ class UIRenderer {
         const isWin = t.profit > 0;
         const profitStr =
           (t.profit >= 0 ? "+" : "") + t.profit.toFixed(2) + "$";
-        const dirLabel = t.direction === "BUY" ? "📈 BUY" : "📉 SELL";
+        const dirLabel = t.direction === "BUY" ? "🟢 BUY" : "🔻 SELL";
         const badgeCls = t.direction === "BUY" ? "buy-badge" : "sell-badge";
         const date = new Date(t.entryTime).toLocaleString("ru-RU", {
           day: "2-digit",
