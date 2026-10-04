@@ -693,11 +693,6 @@ body {
   gap: 6px;
 }
 
-.ms-panel-title::before {
-  content: "🌡";
-  font-size: 13px;
-}
-
 .ms-panel-macro {
   display: flex;
   align-items: center;

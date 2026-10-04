@@ -1448,7 +1448,7 @@ class WSManager {
           return;
         }
         if (this._stopped) return;
-        console.log("🔌 WebSocket закрыт, переподключение...");
+        console.log("WebSocket закрыт, переподключение...");
         this._reconnect();
       };
       this.ws.onerror = () => {
