@@ -1,5 +1,5 @@
 // ============================================================
-//  МОДУЛЬ CRYPTO SIGNAL TOOL (v10.1)
+//  МОДУЛЬ CRYPTO SIGNAL TOOL (v10.2)
 //  + Fear & Greed Index
 //  + Market State Widget (Macro Heatmap)
 //  + Выпадающая документация справа под ms-panel
@@ -7,6 +7,7 @@
 //  + При смене TF панель ОСТАЁТСЯ открытой, меняется только контент
 //  + КОНФИГУРИРУЕМЫЕ ВЕСА ИНДИКАТОРОВ С АВТОНОРМИРОВКОЙ К 100%
 //  + РАСШИРЕННЫЕ ГАЙДЫ ПО ТАЙМФРЕЙМАМ (v10.2)
+//  + ms-panel закрывается только принудительно (клик вне / Esc / toggle)
 // ============================================================
 
 // ---------- Конфигурация ----------
@@ -60,12 +61,6 @@ const CONFIG = {
     neutralFallback: 50,
   },
 
-  // ============================================================
-  //  НАСТРАИВАЕМЫЕ ВЕСА ИНДИКАТОРОВ
-  //  Итоговый балл автоматически нормируется к 0–100,
-  //  поэтому сумма весов может быть любой (не обязательно 100).
-  //  Хочешь усилить/ослабить индикатор — меняй одно число.
-  // ============================================================
   scoring: {
     weights: {
       rsi: 30,
@@ -1696,7 +1691,12 @@ class FearGreedManager {
 }
 
 // ============================================================
-//  MARKET STATE WIDGET (Macro Heatmap) v2.7
+//  MARKET STATE WIDGET (Macro Heatmap) v2.8
+//  Изменение: ms-panel закрывается ТОЛЬКО:
+//   • кликом по .ms-compact (toggle)
+//   • кликом по .ms-docs-close (только docs)
+//   • клавишей Escape
+//   • кликом ВНЕ #market-state-widget (но не по .tf-btn / .tf-arrow-wrap)
 // ============================================================
 class MarketStateWidget {
   static CONFIG = {
@@ -1722,10 +1722,28 @@ class MarketStateWidget {
     this._isOpen = false;
     this._isDocsOpen = false;
 
+    // Закрываем панель только при клике ВНЕ контейнера #market-state-widget.
+    // Клики по .tf-btn и .tf-arrow-wrap игнорируем — это «соседние» элементы.
     this._onDocClick = (e) => {
       if (!this._isOpen) return;
-      if (this._container && !this._container.contains(e.target)) this._close();
+      if (!this._container) return;
+
+      // Клик внутри самого виджета — не закрываем
+      if (this._container.contains(e.target)) return;
+
+      // Клик по кнопке таймфрейма — не закрываем
+      if (e.target.closest?.(".tf-btn")) return;
+
+      // Клик по стрелке гайда TF — не закрываем
+      if (e.target.closest?.(".tf-arrow-wrap")) return;
+
+      // Клик по выпадающему гайду TF — не закрываем
+      if (e.target.closest?.("#tf-guide-panel")) return;
+
+      // Всё остальное — закрываем
+      this._close();
     };
+
     this._onKeyDown = (e) => {
       if (e.key === "Escape" && this._isOpen) this._close();
     };
@@ -2262,8 +2280,7 @@ class MarketStateWidget {
 
 // ============================================================
 //  TF GUIDE PANEL (◂ выпадающая панель с doc-card активного TF)
-//  v10.2: рендер расширенного гайда (description, entry, wait,
-//  leverage, holdTime, proTip)
+//  v10.2: рендер расширенного гайда + закрытие только принудительно
 // ============================================================
 class TFGuidePanel {
   constructor() {
@@ -2337,7 +2354,6 @@ class TFGuidePanel {
     this._el.trigger?.classList.remove("active");
   }
 
-  // ---------- РЕНДЕР РАСШИРЕННОЙ КАРТОЧКИ ----------
   _renderCard(tf) {
     const g = TF_GUIDES[tf];
     if (!g || !this._el.body) return;
@@ -2591,7 +2607,6 @@ class UIRenderer {
     `;
   }
 
-  // ---------- ОБНОВЛЁННАЯ ДОКУМЕНТАЦИЯ С РАСШИРЕННЫМИ ГАЙДАМИ ----------
   _buildDocs() {
     const w = CONFIG.scoring.weights;
     const totalW = Object.values(w).reduce((s, v) => s + v, 0) || 1;
