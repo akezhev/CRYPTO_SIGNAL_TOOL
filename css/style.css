@@ -1748,9 +1748,6 @@ body {
 .docs-wrapper summary::-webkit-details-marker {
   display: none;
 }
-.docs-wrapper summary::before {
-  content: "📖 ";
-}
 .docs-wrapper[open] summary::after {
   content: " ▲";
 }
