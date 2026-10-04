@@ -228,7 +228,7 @@ class SoundManager {
     });
     this._audio.addEventListener("error", () => {
       console.warn(
-        "⚠️ Не удалось загрузить звук, используем Web Audio fallback"
+        "⚠️ Не удалось загрузить звук, используем Web Audio fallback",
       );
       this._useFallback = true;
       this._loaded = true;
@@ -262,7 +262,7 @@ class SoundManager {
       gain.gain.setValueAtTime(0.3, this._audioCtx.currentTime);
       gain.gain.exponentialRampToValueAtTime(
         0.01,
-        this._audioCtx.currentTime + 0.2
+        this._audioCtx.currentTime + 0.2,
       );
       osc.start(this._audioCtx.currentTime);
       osc.stop(this._audioCtx.currentTime + 0.2);
@@ -442,7 +442,7 @@ class DataLoader {
           if (!url) continue;
 
           console.log(
-            `📥 Загрузка ${symbol} с ${ex.id} (${formattedSymbol})...`
+            `📥 Загрузка ${symbol} с ${ex.id} (${formattedSymbol})...`,
           );
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), this.timeout);
@@ -454,7 +454,7 @@ class DataLoader {
 
           if (!resp.ok) {
             console.warn(
-              `❌ ${ex.id} вернул ${resp.status} для ${formattedSymbol}`
+              `❌ ${ex.id} вернул ${resp.status} для ${formattedSymbol}`,
             );
             if (resp.status >= 400 && resp.status < 500 && resp.status !== 429)
               break;
@@ -465,18 +465,18 @@ class DataLoader {
           const candles = this._parse(data, ex.id);
           if (candles && candles.length >= CONFIG.minCandlesRequired) {
             console.log(
-              `✅ Загружено ${candles.length} свечей с ${ex.id} для ${symbol}`
+              `✅ Загружено ${candles.length} свечей с ${ex.id} для ${symbol}`,
             );
             return candles;
           } else {
             console.warn(
-              `⚠️ ${ex.id} вернул мало данных (${candles?.length || 0})`
+              `⚠️ ${ex.id} вернул мало данных (${candles?.length || 0})`,
             );
           }
         } catch (e) {
           console.warn(
             `⚠️ Попытка ${attempt + 1} для ${ex.id} не удалась:`,
-            e.message
+            e.message,
           );
           if (attempt < this.maxRetries - 1)
             await utils.sleep(1000 * (attempt + 1));
@@ -485,7 +485,7 @@ class DataLoader {
     }
 
     console.error(
-      `❌ Не удалось загрузить данные для ${symbol} ни с одной биржи`
+      `❌ Не удалось загрузить данные для ${symbol} ни с одной биржи`,
     );
     return [];
   }
@@ -511,12 +511,12 @@ class DataLoader {
           intervalStr === "1h"
             ? 3600
             : intervalStr === "15m"
-            ? 900
-            : intervalStr === "2h"
-            ? 7200
-            : intervalStr === "4h"
-            ? 14400
-            : 86400;
+              ? 900
+              : intervalStr === "2h"
+                ? 7200
+                : intervalStr === "4h"
+                  ? 14400
+                  : 86400;
         url = `${ex.url}/${symbol}/candles?granularity=${granularity}`;
         break;
       }
@@ -663,7 +663,7 @@ class IndicatorCalculator {
       closes,
       CONFIG.indicators.macdFast,
       CONFIG.indicators.macdSlow,
-      CONFIG.indicators.macdSignal
+      CONFIG.indicators.macdSignal,
     );
     const hist = macd.histogram;
     const currentHist = hist.length ? hist[hist.length - 1] : 0;
@@ -699,7 +699,7 @@ class IndicatorCalculator {
     const bb = this._bb(
       closes,
       CONFIG.indicators.bbPeriod,
-      CONFIG.indicators.bbStdDev
+      CONFIG.indicators.bbStdDev,
     );
     const bbUpper = bb.upper.length
       ? bb.upper[bb.upper.length - 1]
@@ -860,8 +860,8 @@ class IndicatorCalculator {
         change > 0
           ? vol * (change / candles[i - 1].close)
           : change < 0
-          ? -vol * (Math.abs(change) / candles[i - 1].close)
-          : 0;
+            ? -vol * (Math.abs(change) / candles[i - 1].close)
+            : 0;
       cum += delta;
       cvd.push(cum);
     }
@@ -1071,7 +1071,7 @@ class SignalGenerator {
       sellRaw,
       ind.trendStrength,
       ind.bbWidth,
-      totalWeight
+      totalWeight,
     );
 
     return {
@@ -1260,22 +1260,27 @@ class Backtester {
 
         if (move >= position.takeProfitDistance) {
           trades.push(
-            this._closePosition(position, price, current.time, "take_profit")
+            this._closePosition(position, price, current.time, "take_profit"),
           );
           position = null;
         } else if (move <= -position.stopDistance) {
           trades.push(
-            this._closePosition(position, price, current.time, "stop_loss")
+            this._closePosition(position, price, current.time, "stop_loss"),
           );
           position = null;
         } else if (i - (position.entryIndex ?? i) > 50) {
           trades.push(
-            this._closePosition(position, price, current.time, "timeout")
+            this._closePosition(position, price, current.time, "timeout"),
           );
           position = null;
         } else if (isOpposite) {
           trades.push(
-            this._closePosition(position, price, current.time, "reverse_signal")
+            this._closePosition(
+              position,
+              price,
+              current.time,
+              "reverse_signal",
+            ),
           );
           position = null;
         }
@@ -1307,7 +1312,7 @@ class Backtester {
     if (position) {
       const last = agg[agg.length - 1];
       trades.push(
-        this._closePosition(position, last.close, last.time, "timeout")
+        this._closePosition(position, last.close, last.time, "timeout"),
       );
     }
 
@@ -1420,7 +1425,7 @@ class WSManager {
       .join("/");
     try {
       this.ws = new WebSocket(
-        `wss://stream.binance.com:9443/stream?streams=${streams}`
+        `wss://stream.binance.com:9443/stream?streams=${streams}`,
       );
       this.ws.onopen = () => {
         this.connected = true;
@@ -1534,7 +1539,7 @@ class FearGreedManager {
             "✅ F&G:",
             v,
             "—",
-            json?.data?.[0]?.value_classification || this._classify(v)
+            json?.data?.[0]?.value_classification || this._classify(v),
           );
           this._set(v);
           return;
@@ -1547,7 +1552,7 @@ class FearGreedManager {
 
     console.warn(
       "⚠️ F&G: все источники недоступны, оставляю",
-      this.neutralFallback
+      this.neutralFallback,
     );
     this._set(this.neutralFallback);
   }
@@ -1625,7 +1630,7 @@ class MarketStateWidget {
     this._container = document.getElementById(this.cfg.containerId);
     if (!this._container) {
       console.warn(
-        `⚠️ MarketStateWidget: #${this.cfg.containerId} не найден в DOM`
+        `⚠️ MarketStateWidget: #${this.cfg.containerId} не найден в DOM`,
       );
       return;
     }
@@ -1736,16 +1741,16 @@ class MarketStateWidget {
     const tasks = await Promise.allSettled([
       this._fetchJSON("https://api.coingecko.com/api/v3/global"),
       this._fetchJSON(
-        "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&price_change_percentage=24h"
+        "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&price_change_percentage=24h",
       ),
       this._fetchJSON(
-        "https://fapi.binance.com/fapi/v1/premiumIndex?symbol=BTCUSDT"
+        "https://fapi.binance.com/fapi/v1/premiumIndex?symbol=BTCUSDT",
       ),
       this._fetchJSON(
-        "https://fapi.binance.com/futures/data/openInterestHist?symbol=BTCUSDT&period=1h&limit=24"
+        "https://fapi.binance.com/futures/data/openInterestHist?symbol=BTCUSDT&period=1h&limit=24",
       ),
       this._fetchJSON(
-        "https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1"
+        "https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1",
       ),
     ]);
 
@@ -1817,14 +1822,14 @@ class MarketStateWidget {
     if (!coins || coins.length < 10) return 50;
     const top50 = coins.slice(0, 50);
     const beating = top50.filter(
-      (x) => (x.price_change_percentage_24h || 0) > btcCh
+      (x) => (x.price_change_percentage_24h || 0) > btcCh,
     ).length;
     return this._clamp((beating / top50.length) * 100, 0, 100);
   }
   _normGainers(coins) {
     if (!coins || !coins.length) return 50;
     const up = coins.filter(
-      (x) => (x.price_change_percentage_24h || 0) > 0
+      (x) => (x.price_change_percentage_24h || 0) > 0,
     ).length;
     return this._clamp((up / coins.length) * 100, 0, 100);
   }
@@ -1834,22 +1839,22 @@ class MarketStateWidget {
     const liquidity = Math.round(
       this._normVolume(m.totalVolume) * w.liquidity.volume +
         this._normMcap(m.totalMcap) * w.liquidity.mcap +
-        this._normVolatility(m.mcapChange24h) * w.liquidity.volatility
+        this._normVolatility(m.mcapChange24h) * w.liquidity.volatility,
     );
     const leverage = Math.round(
       this._normFunding(m.fundingRate) * w.leverage.funding +
         this._normOI(m.oiHist) * w.leverage.oi +
-        this._normLS(m.lsRatio) * w.leverage.lsRatio
+        this._normLS(m.lsRatio) * w.leverage.lsRatio,
     );
     const breadth = Math.round(
       this._normDominance(m.btcDominance) * w.breadth.dominance +
         this._normAltseason(m.btcChange24h, m.topCoins) * w.breadth.altseason +
-        this._normGainers(m.topCoins) * w.breadth.gainers
+        this._normGainers(m.topCoins) * w.breadth.gainers,
     );
     const macro = Math.round(
       liquidity * w.macro.liquidity +
         leverage * w.macro.leverage +
-        breadth * w.macro.breadth
+        breadth * w.macro.breadth,
     );
     return { liquidity, leverage, breadth, macro };
   }
@@ -1869,7 +1874,7 @@ class MarketStateWidget {
     try {
       localStorage.setItem(
         this.cfg.cacheKey,
-        JSON.stringify({ ts: Date.now(), data })
+        JSON.stringify({ ts: Date.now(), data }),
       );
     } catch {}
   }
@@ -1986,14 +1991,14 @@ class MarketStateWidget {
                 <div class="ms-bar-track"><div class="ms-bar-fill ms-blue"></div></div>
                 <span class="ms-bar-value">--</span>
               </div>
-            `
+            `,
               )
               .join("")}
           </div>
         </div>
         <div class="ms-docs-panel">
           <div class="ms-docs-header">
-            <span>📖 ДОКУМЕНТАЦИЯ</span>
+            <span>ДОКУМЕНТАЦИЯ</span>
             <button class="ms-docs-close" type="button">✕</button>
           </div>
           <div class="ms-docs-content"></div>
@@ -2028,14 +2033,14 @@ class MarketStateWidget {
         <span class="ms-row-label">${r.label}</span>
         <div class="ms-bar-track">
           <div class="ms-bar-fill ${this._scoreClass(r.val)}" style="width:${
-          r.val
-        }%"></div>
+            r.val
+          }%"></div>
         </div>
         <span class="ms-bar-value" style="color:${this._scoreColor(r.val)};">${
           r.val
         }</span>
       </div>
-    `
+    `,
       )
       .join("");
 
@@ -2069,10 +2074,10 @@ class MarketStateWidget {
             <div class="ms-detail"><span>BTC Dom</span><span class="ms-detail-val">${btcDom}%</span></div>
             <div class="ms-detail"><span>MCap 24h</span><span class="ms-detail-val ${mcapCls}">${mcapChange}%</span></div>
             <div class="ms-detail"><span>Объём 24h</span><span class="ms-detail-val">$${this._fmtNum(
-              data.totalVolume
+              data.totalVolume,
             )}</span></div>
             <div class="ms-detail"><span>Капитализация</span><span class="ms-detail-val">$${this._fmtNum(
-              data.totalMcap
+              data.totalMcap,
             )}</span></div>
           </div>
 
@@ -2080,7 +2085,7 @@ class MarketStateWidget {
             <div class="ms-panel-update">
               <span class="ms-dot" id="ms-status-dot"></span>
               <span id="ms-update-time">${this._fmtTime(
-                data.ts || Date.now()
+                data.ts || Date.now(),
               )}</span>
             </div>
             <button class="ms-refresh-btn" id="ms-refresh-btn" type="button">↻ Обновить</button>
@@ -2092,7 +2097,7 @@ class MarketStateWidget {
 
         <div class="ms-docs-panel">
           <div class="ms-docs-header">
-            <span>📖 ДОКУМЕНТАЦИЯ</span>
+            <span>ДОКУМЕНТАЦИЯ</span>
             <button class="ms-docs-close" type="button">✕</button>
           </div>
           <div class="ms-docs-content">
@@ -2285,8 +2290,8 @@ class TFGuidePanel {
     this._el.body.innerHTML = `
       <div class="doc-card" data-tf="${tf}">
         <div class="tf-name">${guide.icon} ${guide.name}</div>
-        <div style="margin:4px 0; font-size:11px;"><span class="action-buy">📈 BUY:</span> ${guide.action.BUY}</div>
-        <div style="margin:4px 0; font-size:11px;"><span class="action-sell">📉 SELL:</span> ${guide.action.SELL}</div>
+        <div style="margin:4px 0; font-size:11px;"><span class="action-buy"><span style="color:green;">▲</span> BUY:</span> ${guide.action.BUY}</div>
+        <div style="margin:4px 0; font-size:11px;"><span class="action-sell"><span style="color:red;">▼</span> SELL:</span> ${guide.action.SELL}</div>
         <div style="margin:4px 0; font-size:11px;"><span class="action-wait">⏸️ WAIT:</span> ${guide.action.WAIT}</div>
         <div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.05);">
           <div><span class="risk-label">Риск:</span> <span class="risk-value">${guide.risk}</span></div>
@@ -2353,14 +2358,14 @@ class UIRenderer {
                         (ind) => `
                         <div class="indicator-item" data-indicator="${ind}">
                             <span class="ind-label">${this._indLabel(
-                              ind
+                              ind,
                             )}</span>
                             <div class="indicator-bar-wrap">
                                 <div class="indicator-bar-fill neutral" style="width:0%"></div>
                             </div>
                             <span class="ind-value neutral">--</span>
                         </div>
-                    `
+                    `,
                       )
                       .join("")}
                 </div>
@@ -2371,12 +2376,12 @@ class UIRenderer {
                         <div class="bar-bg"><div class="bar-fill" style="width:0%"></div></div>
                     </div>
                     <div class="action-indicator buy" data-action="buy">
-                        <span class="label">📈 Купить</span>
+                        <span class="label"><span style="color:green;">▲</span> Купить</span>
                         <span class="value">0%</span>
                         <div class="bar-bg"><div class="bar-fill" style="width:0%"></div></div>
                     </div>
                     <div class="action-indicator sell" data-action="sell">
-                        <span class="label">📉 Продать</span>
+                        <span class="label">🔻 Продать</span>
                         <span class="value">0%</span>
                         <div class="bar-bg"><div class="bar-fill" style="width:0%"></div></div>
                     </div>
@@ -2385,7 +2390,7 @@ class UIRenderer {
                     <span class="tf-signal">--</span>
                 </div>
             </div>
-        `
+        `,
       )
       .join("");
 
@@ -2394,7 +2399,7 @@ class UIRenderer {
                 <div class="widget-header">
                     <div>
                         <span class="widget-title">⚛ CRYPTO SIGNAL TOOL ⚛</span>
-                        <span class="widget-version">v10.1 • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin) •</span>
+                        <span class="widget-version"><b>v10.1</b> • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin) •</span>
                     </div>
                     <div class="widget-status-group">
                         <div class="sound-controls">
@@ -2418,7 +2423,7 @@ class UIRenderer {
                         <button class="tf-arrow" type="button" data-tf="◂">◂</button>
                         <div class="tf-guide-panel" id="tf-guide-panel">
                             <div class="tf-guide-panel-header">
-                                <span>📖 ГАЙД ТАЙМФРЕЙМА</span>
+                                <span>ГАЙД ТАЙМФРЕЙМА</span>
                                 <button class="tf-guide-panel-close" type="button" title="Закрыть">✕</button>
                             </div>
                             <div class="tf-guide-panel-body" id="tf-guide-body"></div>
@@ -2429,7 +2434,7 @@ class UIRenderer {
                         (tf) =>
                           `<button class="tf-btn ${
                             tf === CONFIG.defaultTF ? "active" : ""
-                          }" data-tf="${tf}">${tf}</button>`
+                          }" data-tf="${tf}">${tf}</button>`,
                       )
                       .join("")}
                     <div class="signal-count-item">⚡ <span id="signal-count">0</span> сигналов</div>
@@ -2455,7 +2460,7 @@ class UIRenderer {
 
                 <div class="trade-history-section">
                     <div class="trade-history-header">
-                        <div class="trade-history-title">📊 ИСТОРИЯ ТОРГОВЛИ (backtesting) стратегии на исторических данных. Виджет симулирует торговлю, используя те же самые 7 индикаторов, и показывает, как бы вы заработали или потеряли деньги, если бы следовали сигналам в прошлом.</div>
+                        <div class="trade-history-title">ИСТОРИЯ ТОРГОВЛИ (backtesting) стратегии на исторических данных. Виджет симулирует торговлю, используя те же самые 7 индикаторов, и показывает, как бы вы заработали или потеряли деньги, если бы следовали сигналам в прошлом.</div>
                         <div class="trade-history-stats" id="trade-stats">
                             <div class="stat-item">Всего: <span class="stat-value total" id="stat-total">0</span></div>
                             <div class="stat-item">✅ Win: <span class="stat-value win" id="stat-wins">0</span></div>
@@ -2505,8 +2510,8 @@ class UIRenderer {
                     return `
                         <div class="doc-card" data-tf="${tf}">
                             <div class="tf-name">${guide.icon} ${guide.name}</div>
-                            <div style="margin:4px 0; font-size:11px;"><span class="action-buy">📈 BUY:</span> ${guide.action.BUY}</div>
-                            <div style="margin:4px 0; font-size:11px;"><span class="action-sell">📉 SELL:</span> ${guide.action.SELL}</div>
+                            <div style="margin:4px 0; font-size:11px;"><span class="action-buy"><span style="color:green;">▲</span> BUY:</span> ${guide.action.BUY}</div>
+                            <div style="margin:4px 0; font-size:11px;"><span class="action-sell">🔻 SELL:</span> ${guide.action.SELL}</div>
                             <div style="margin:4px 0; font-size:11px;"><span class="action-wait">⏸️ WAIT:</span> ${guide.action.WAIT}</div>
                             <div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.05);">
                                 <div><span class="risk-label">Риск:</span> <span class="risk-value">${guide.risk}</span></div>
@@ -2560,15 +2565,15 @@ class UIRenderer {
 
   _displayName(asset) {
     const map = {
-      BTC: "₿ BTC",
-      ETH: "⟠ ETH",
-      BNB: "🟡 BNB",
-      SOL: "◎ SOL",
-      XRP: "✕ XRP",
-      ADA: "₳ ADA",
-      GRAM: "📱 GRAM",
-      TRX: "🔺 TRX",
-      PAXG: "🥇 PAXG",
+      BTC: "BTC",
+      ETH: "ETH",
+      BNB: "BNB",
+      SOL: "SOL",
+      XRP: "XRP",
+      ADA: "ADA",
+      GRAM: "GRAM",
+      TRX: "TRX",
+      PAXG: "PAXG",
     };
     return map[asset] || asset;
   }
@@ -2683,10 +2688,10 @@ class UIRenderer {
         conf >= 75
           ? "#34d399"
           : conf >= 60
-          ? "#fbbf24"
-          : conf >= 45
-          ? "#f59e0b"
-          : "#475569";
+            ? "#fbbf24"
+            : conf >= 45
+              ? "#f59e0b"
+              : "#475569";
     }
 
     this._updateIndicators(card, signal.indicatorScores);
@@ -2750,8 +2755,8 @@ class UIRenderer {
         direction.includes("bullish")
           ? "bullish"
           : direction.includes("bearish")
-          ? "bearish"
-          : "neutral"
+            ? "bearish"
+            : "neutral"
       }`;
     });
   }
@@ -2779,7 +2784,7 @@ class UIRenderer {
         (cls) =>
           !cls.startsWith("buy-") &&
           !cls.startsWith("sell-") &&
-          cls !== "neutral"
+          cls !== "neutral",
       )
       .join(" ");
     if (badge) {
@@ -2869,7 +2874,7 @@ class UIRenderer {
                             }%</span>
                         </div>
                         <div class="trade-detail">Entry: $${t.entryPrice.toFixed(
-                          2
+                          2,
                         )} → Exit: $${t.exitPrice.toFixed(2)}</div>
                         <div class="trade-time">${date}</div>
                     </div>
@@ -2885,10 +2890,10 @@ class UIRenderer {
                           t.exitReason === "take_profit"
                             ? "✅ TP"
                             : t.exitReason === "stop_loss"
-                            ? "🛑 SL"
-                            : t.exitReason === "reverse_signal"
-                            ? "🔄 REV"
-                            : "⏱️ TO"
+                              ? "🛑 SL"
+                              : t.exitReason === "reverse_signal"
+                                ? "🔄 REV"
+                                : "⏱️ TO"
                         }</div>
                     </div>
                 </div>
@@ -3016,7 +3021,7 @@ class App {
       const candles = await this.dataLoader.fetchCandles(
         symbol,
         tf,
-        CONFIG.historyCandles
+        CONFIG.historyCandles,
       );
       if (candles && candles.length) {
         this.marketData.set(asset, candles);
@@ -3046,7 +3051,7 @@ class App {
     allTrades.sort((a, b) => b.exitTime - a.exitTime);
     this.ui.updateTradeHistory(
       allTrades,
-      this.backtester.computeStats(allTrades)
+      this.backtester.computeStats(allTrades),
     );
     this.ui.setHistoryStatus(`${allTrades.length} сделок`);
   }
@@ -3066,7 +3071,7 @@ class App {
     const k = data.k;
     const symbol = data.s;
     const asset = Object.keys(CONFIG.symbolMap).find(
-      (a) => CONFIG.symbolMap[a] === symbol
+      (a) => CONFIG.symbolMap[a] === symbol,
     );
     if (!asset || !CONFIG.assets.includes(asset)) return;
     if (!this.marketData.has(asset)) this.marketData.set(asset, []);
@@ -3167,7 +3172,7 @@ class App {
       const candles = await this.dataLoader.fetchCandles(
         symbol,
         this.currentTF,
-        CONFIG.historyCandles
+        CONFIG.historyCandles,
       );
       if (candles && candles.length) {
         this.marketData.set(asset, candles);
