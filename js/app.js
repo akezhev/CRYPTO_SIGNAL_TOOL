@@ -169,7 +169,7 @@ const TF_GUIDES = {
     takeProfit: "3-6%",
   },
   "1d": {
-    name: "1 День",
+    name: "День",
     icon: "🗓",
     action: {
       BUY: "Долгосрочный вход. Цель: +5-15%. Стоп: -3-5%.",
@@ -2089,8 +2089,7 @@ class MarketStateWidget {
               )}</span>
             </div>
             <button class="ms-refresh-btn" id="ms-refresh-btn" type="button">↻ Обновить</button>
-            <button class="ms-docs-btn" id="ms-docs-btn" type="button">
-              ДОКУМЕНТАЦИЯ<span class="ms-compact-arrow ms-docs-arrow">▼</span>
+            <button class="ms-docs-btn" id="ms-docs-btn" type="button">ДОКУМЕНТАЦИЯ<span class="ms-compact-arrow ms-docs-arrow">▼</span>
             </button>
           </div>
         </div>
