@@ -2462,10 +2462,10 @@ class UIRenderer {
                         <div class="trade-history-title">ИСТОРИЯ ТОРГОВЛИ (backtesting) стратегии на исторических данных. Виджет симулирует торговлю, используя те же самые 7 индикаторов, и показывает, как бы вы заработали или потеряли деньги, если бы следовали сигналам в прошлом.</div>
                         <div class="trade-history-stats" id="trade-stats">
                             <div class="stat-item">Всего: <span class="stat-value total" id="stat-total">0</span></div>
-                            <div class="stat-item">✅ Win: <span class="stat-value win" id="stat-wins">0</span></div>
-                            <div class="stat-item">❌ Loss: <span class="stat-value loss" id="stat-losses">0</span></div>
-                            <div class="stat-item">📈 Win Rate: <span class="stat-value" id="stat-winrate" style="color:#fbbf24;">0%</span></div>
-                            <div class="stat-item">💰 P/L: <span class="stat-value" id="stat-pl" style="color:#94a3b8;">$0</span></div>
+                            <div class="stat-item">Win: <span class="stat-value win" id="stat-wins">0</span></div>
+                            <div class="stat-item">Loss: <span class="stat-value loss" id="stat-losses">0</span></div>
+                            <div class="stat-item">Win Rate: <span class="stat-value" id="stat-winrate" style="color:#fbbf24;">0%</span></div>
+                            <div class="stat-item">P/L: <span class="stat-value" id="stat-pl" style="color:#94a3b8;">$0</span></div>
                         </div>
                     </div>
                     <div class="trade-history-grid" id="trade-history-grid">
@@ -2476,8 +2476,8 @@ class UIRenderer {
                 <div class="widget-footer">
                     <div class="footer-stat">🎯 >75% Сильный</div>
                     <div class="footer-stat">💾 <span id="cache-status">Кэш</span></div>
-                    <div class="footer-stat">🔗 <span id="connection-info">WebSocket</span></div>
-                    <div class="footer-stat">📈 <span id="history-status">История</span></div>
+                    <div class="footer-stat"><span id="connection-info">WebSocket</span></div>
+                    <div class="footer-stat"><span id="history-status">История</span></div>
                     <div class="footer-stat">⚡<span id="asset-count">${
                       CONFIG.assets.length
                     } активов</span></div>
