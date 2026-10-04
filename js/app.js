@@ -2290,7 +2290,7 @@ class TFGuidePanel {
     this._el.body.innerHTML = `
       <div class="doc-card" data-tf="${tf}">
         <div class="tf-name">${guide.icon} ${guide.name}</div>
-        <div style="margin:4px 0; font-size:11px;"><span class="action-buy"><span style="color:green;">▲</span> BUY:</span> ${guide.action.BUY}</div>
+        <div style="margin:4px 0; font-size:11px;"><span class="action-buy"><span style="color:#00ff00;">▲</span> BUY:</span> ${guide.action.BUY}</div>
         <div style="margin:4px 0; font-size:11px;"><span class="action-sell"><span style="color:red;">▼</span> SELL:</span> ${guide.action.SELL}</div>
         <div style="margin:4px 0; font-size:11px;"><span class="action-wait">⏸️ WAIT:</span> ${guide.action.WAIT}</div>
         <div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.05);">
@@ -2376,7 +2376,7 @@ class UIRenderer {
                         <div class="bar-bg"><div class="bar-fill" style="width:0%"></div></div>
                     </div>
                     <div class="action-indicator buy" data-action="buy">
-                        <span class="label"><span style="color:green;">▲</span> Купить</span>
+                        <span class="label"><span style="color:#00ff00;">▲</span> Купить</span>
                         <span class="value">0%</span>
                         <div class="bar-bg"><div class="bar-fill" style="width:0%"></div></div>
                     </div>
@@ -2510,7 +2510,7 @@ class UIRenderer {
                     return `
                         <div class="doc-card" data-tf="${tf}">
                             <div class="tf-name">${guide.icon} ${guide.name}</div>
-                            <div style="margin:4px 0; font-size:11px;"><span class="action-buy"><span style="color:green;">▲</span> BUY:</span> ${guide.action.BUY}</div>
+                            <div style="margin:4px 0; font-size:11px;"><span class="action-buy"><span style="color:#00ff00;">▲</span> BUY:</span> ${guide.action.BUY}</div>
                             <div style="margin:4px 0; font-size:11px;"><span class="action-sell">🔻 SELL:</span> ${guide.action.SELL}</div>
                             <div style="margin:4px 0; font-size:11px;"><span class="action-wait">⏸️ WAIT:</span> ${guide.action.WAIT}</div>
                             <div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.05);">
@@ -2545,7 +2545,7 @@ class UIRenderer {
             <br>
             <span>Данное приложение — это мощный инструмент для принятия торговых решений, но не гарантия прибыли. Это профессиональный торговый терминал для криптовалют, который объединяет 7 лучших технических индикаторов в единую систему генерации сигналов. Приложение работает в реальном времени, анализируя данные с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin)</span>
             <br><br>
-            <span>🧠 РАСШИФРОВКА 7 ИНДИКАТОРОВ (веса настраиваются в CONFIG.scoring.weights, итог автонормируется к 100%)<br>
+            <span>РАСШИФРОВКА 7 ИНДИКАТОРОВ (веса настраиваются в CONFIG.scoring.weights, итог автонормируется к 100%)<br>
               1. RSI — вес ${w.rsi} → ${pct("rsi")}%<br>
               2. MACD — вес ${w.macd} → ${pct("macd")}%<br>
               3. EMA Ribbon — вес ${w.ema} → ${pct("ema")}%<br>
