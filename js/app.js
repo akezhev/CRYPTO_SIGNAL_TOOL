@@ -62,13 +62,13 @@ const CONFIG = {
 
   scoring: {
     weights: {
-      rsi: 10,
+      rsi: 20,
       macd: 10,
       ema: 10,
       cvd: 10,
-      bb: 10,
-      volume: 10,
-      poc: 10,
+      bb: 20,
+      volume: 20,
+      poc: 20,
     },
     gradations: {
       rsi: { extreme: 1.0, strong: 0.66, normal: 0.5, weak: 0.16 },
