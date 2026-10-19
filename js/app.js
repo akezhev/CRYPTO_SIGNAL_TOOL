@@ -1,14 +1,11 @@
 // ============================================================
 //  МОДУЛЬ CRYPTO SIGNAL TOOL (v10.3)
-//  + Fear & Greed Index
-//  + Market State Widget (Macro Heatmap)
-//  + TF-arrow: выпадающая карточка doc-card активного TF
-//  + КОНФИГУРИРУЕМЫЕ ВЕСА ИНДИКАТОРОВ С АВТОНОРМИРОВКОЙ К 100%
-//  + РАСШИРЕННЫЕ ГАЙДЫ ПО ТАЙМФРЕЙМАМ
-//  + indicatorStates: сырые значения всех 7 индикаторов в UI
-//  + Фиксы: _macd, _poc, _normalizeCandles, _handleKline volume,
-//           нормализация процентов по весу, нейтральные состояния,
-//           единая агрегация свечей, оптимизация бэктеста
+//  Совместим с текущим CSS (без .strong-bullish на баре)
+//  + indicatorStates: реальные значения всех 7 индикаторов
+//  + нормализация процентов по весу индикатора
+//  + нейтральные состояния вместо "0"
+//  + фиксы _macd, _poc, _normalizeCandles, _handleKline volume
+//  + единая агрегация свечей, оптимизация бэктеста
 // ============================================================
 
 // ---------- Конфигурация ----------
@@ -43,10 +40,7 @@ const CONFIG = {
     maxLossPercent: 1.0,
     positionSize: 1000,
   },
-  sound: {
-    threshold: 75,
-    filePath: "audio/Ding-ding.mp3",
-  },
+  sound: { threshold: 75, filePath: "audio/Ding-ding.mp3" },
   indicators: {
     rsiPeriod: 14,
     macdFast: 12,
@@ -57,10 +51,7 @@ const CONFIG = {
     bbStdDev: 2,
     atrPeriod: 14,
   },
-  fearGreed: {
-    intervalMs: 5 * 60 * 1000,
-    neutralFallback: 50,
-  },
+  fearGreed: { intervalMs: 5 * 60 * 1000, neutralFallback: 50 },
   scoring: {
     weights: {
       rsi: 20,
@@ -80,7 +71,6 @@ const CONFIG = {
   },
 };
 
-// ---------- Единая шкала Macro Score ----------
 const MACRO_SCALE = [
   {
     min: 75,
@@ -230,28 +220,16 @@ const TF_GUIDES = {
   },
 };
 
-// ---------- Вспомогательные утилиты ----------
+// ---------- Утилиты ----------
 const utils = {
-  sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
   clamp: (v, min, max) => Math.max(min, Math.min(max, v)),
-  round: (v, d = 2) => {
-    const n = Number(v);
-    return Number.isFinite(n) ? Number(n.toFixed(d)) : 0;
-  },
   toMs: (t) => {
     const n = Number(t);
     if (!Number.isFinite(n)) return 0;
     return n < 1e12 ? n * 1000 : n;
   },
-  last: (arr) => arr[arr.length - 1],
-  safeGet: (obj, path, def) => {
-    try {
-      return path.split(".").reduce((o, p) => o?.[p], obj) ?? def;
-    } catch {
-      return def;
-    }
-  },
-  // Единая агрегация свечей — используется в SignalGenerator, Backtester, App
+  // Единая агрегация свечей
   aggregateCandles: (candles, tf) => {
     const minutes = CONFIG.tfMinutes[tf] || 60;
     if (!candles || !candles.length) return [];
@@ -278,7 +256,7 @@ const utils = {
   },
 };
 
-// ---------- Менеджер звука ----------
+// ---------- SoundManager ----------
 class SoundManager {
   constructor() {
     this._enabled = true;
@@ -292,7 +270,6 @@ class SoundManager {
     this._audioCtx = null;
     this._init();
   }
-
   _init() {
     this._audio.addEventListener("canplaythrough", () => {
       this._loaded = true;
@@ -308,34 +285,28 @@ class SoundManager {
     });
     if (this._audio.readyState >= 3) this._loaded = true;
     this._loadState();
-
-    // AudioContext требует user gesture — резюмируем при первом клике
-    const resumeOnGesture = () => {
+    const resume = () => {
       if (this._audioCtx && this._audioCtx.state === "suspended") {
         this._audioCtx.resume().catch(() => {});
       }
-      document.removeEventListener("click", resumeOnGesture);
-      document.removeEventListener("touchstart", resumeOnGesture);
+      document.removeEventListener("click", resume);
+      document.removeEventListener("touchstart", resume);
     };
-    document.addEventListener("click", resumeOnGesture);
-    document.addEventListener("touchstart", resumeOnGesture);
+    document.addEventListener("click", resume);
+    document.addEventListener("touchstart", resume);
   }
-
   _initWebAudio() {
     try {
       this._audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     } catch (e) {
-      console.warn("Web Audio не поддерживается");
       this._loaded = false;
     }
   }
-
   _playFallback() {
     if (!this._audioCtx) return;
     try {
-      if (this._audioCtx.state === "suspended") {
+      if (this._audioCtx.state === "suspended")
         this._audioCtx.resume().catch(() => {});
-      }
       const osc = this._audioCtx.createOscillator();
       const gain = this._audioCtx.createGain();
       osc.connect(gain);
@@ -351,7 +322,6 @@ class SoundManager {
       osc.stop(this._audioCtx.currentTime + 0.2);
     } catch (e) {}
   }
-
   play(signalType, asset, confidence) {
     if (!this._enabled || !this._loaded || confidence < CONFIG.sound.threshold)
       return;
@@ -359,30 +329,25 @@ class SoundManager {
     const now = Date.now();
     if (now - (this._lastPlayed.get(key) || 0) < 10000) return;
     this._lastPlayed.set(key, now);
-
     try {
       if (this._useFallback) this._playFallback();
       else {
         this._audio.currentTime = 0;
         this._audio.play().catch(() => {});
       }
-      console.log(`🔊 ${signalType} ${asset} (${confidence}%)`);
-      for (const [k, t] of this._lastPlayed) {
+      for (const [k, t] of this._lastPlayed)
         if (now - t > 300000) this._lastPlayed.delete(k);
-      }
     } catch (e) {}
   }
-
   startRepeating(asset, signalType, confidence) {
     const key = `${asset}-${signalType}`;
     if (this._intervals.has(key)) return;
     this.play(signalType, asset, confidence);
-    const id = setInterval(() => {
-      this.play(signalType, asset, confidence);
-    }, 10000);
-    this._intervals.set(key, id);
+    this._intervals.set(
+      key,
+      setInterval(() => this.play(signalType, asset, confidence), 10000),
+    );
   }
-
   stopRepeating(asset) {
     for (const [key, id] of this._intervals) {
       if (key.startsWith(`${asset}-`)) {
@@ -390,31 +355,20 @@ class SoundManager {
         this._intervals.delete(key);
       }
     }
-    for (const [key] of this._lastPlayed) {
+    for (const [key] of this._lastPlayed)
       if (key.startsWith(`${asset}-`)) this._lastPlayed.delete(key);
-    }
   }
-
   clearAll() {
     for (const [, id] of this._intervals) clearInterval(id);
     this._intervals.clear();
     this._lastPlayed.clear();
   }
-
   toggle() {
     this._enabled = !this._enabled;
     this._saveState();
     if (!this._enabled) this.clearAll();
     return this._enabled;
   }
-
-  isEnabled() {
-    return this._enabled;
-  }
-  isLoaded() {
-    return this._loaded;
-  }
-
   _saveState() {
     try {
       localStorage.setItem("signalSoundEnabled", JSON.stringify(this._enabled));
@@ -428,7 +382,7 @@ class SoundManager {
   }
 }
 
-// ---------- Загрузчик данных ----------
+// ---------- DataLoader ----------
 class DataLoader {
   constructor() {
     this.exchanges = [
@@ -443,27 +397,25 @@ class DataLoader {
     this.timeout = 8000;
     this.maxRetries = 3;
   }
-
-  _formatSymbol(exchangeId, symbol) {
-    switch (exchangeId) {
+  _formatSymbol(id, s) {
+    switch (id) {
       case "binance":
       case "bybit":
       case "mexc":
-        return symbol;
+        return s;
       case "kucoin":
       case "okx":
-        return symbol.replace("USDT", "-USDT").replace("BUSD", "-BUSD");
+        return s.replace("USDT", "-USDT").replace("BUSD", "-BUSD");
       case "coinbase":
-        return symbol.replace("USDT", "-USD").replace("BUSD", "-USD");
+        return s.replace("USDT", "-USD").replace("BUSD", "-USD");
       case "htx":
-        return symbol.toLowerCase();
+        return s.toLowerCase();
       default:
-        return symbol;
+        return s;
     }
   }
-
   async fetchCandles(symbol, interval = "1h", limit = CONFIG.historyCandles) {
-    const intervalMap = {
+    const im = {
       "15m": {
         binance: "15m",
         bybit: "15",
@@ -510,112 +462,73 @@ class DataLoader {
         coinbase: "1d",
       },
     };
-
-    const orderedExchanges = [
+    const ordered = [
       this.exchanges.find((e) => e.id === "binance"),
       ...this.exchanges.filter((e) => e.id !== "binance"),
     ].filter(Boolean);
 
-    for (const ex of orderedExchanges) {
-      for (let attempt = 0; attempt < this.maxRetries; attempt++) {
+    for (const ex of ordered) {
+      for (let a = 0; a < this.maxRetries; a++) {
         try {
-          const formattedSymbol = this._formatSymbol(ex.id, symbol);
-          const intervalStr = intervalMap[interval]?.[ex.id] || "1h";
-          const url = this._buildUrl(ex, formattedSymbol, intervalStr, limit);
+          const fs = this._formatSymbol(ex.id, symbol);
+          const istr = im[interval]?.[ex.id] || "1h";
+          const url = this._buildUrl(ex, fs, istr, limit);
           if (!url) continue;
-
-          console.log(
-            `📀 Загрузка ${symbol} с ${ex.id} (${formattedSymbol})...`,
-          );
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-          const resp = await fetch(url, {
+          const ctrl = new AbortController();
+          const tid = setTimeout(() => ctrl.abort(), this.timeout);
+          const r = await fetch(url, {
             headers: { Accept: "application/json" },
-            signal: controller.signal,
+            signal: ctrl.signal,
           });
-          clearTimeout(timeoutId);
-
-          if (!resp.ok) {
-            console.warn(
-              `❌ ${ex.id} вернул ${resp.status} для ${formattedSymbol}`,
-            );
-            if (resp.status >= 400 && resp.status < 500 && resp.status !== 429)
-              break;
+          clearTimeout(tid);
+          if (!r.ok) {
+            if (r.status >= 400 && r.status < 500 && r.status !== 429) break;
             continue;
           }
-
-          const data = await resp.json();
+          const data = await r.json();
           const candles = this._parse(data, ex.id);
-          if (candles && candles.length >= CONFIG.minCandlesRequired) {
-            console.log(
-              `✅ Загружено ${candles.length} свечей с ${ex.id} для ${symbol}`,
-            );
+          if (candles && candles.length >= CONFIG.minCandlesRequired)
             return candles;
-          } else {
-            console.warn(
-              `⚠️ ${ex.id} вернул мало данных (${candles?.length || 0})`,
-            );
-          }
         } catch (e) {
-          console.warn(
-            `⚠️ Попытка ${attempt + 1} для ${ex.id} не удалась:`,
-            e.message,
-          );
-          if (attempt < this.maxRetries - 1)
-            await utils.sleep(1000 * (attempt + 1));
+          if (a < this.maxRetries - 1) await utils.sleep(1000 * (a + 1));
         }
       }
     }
-
-    console.error(
-      `❌ Не удалось загрузить данные для ${symbol} ни с одной биржи`,
-    );
     return [];
   }
-
-  _buildUrl(ex, symbol, intervalStr, limit) {
+  _buildUrl(ex, s, istr, limit) {
     const lim = this._clampLimit(ex.id, limit);
-    let url = "";
     switch (ex.id) {
       case "binance":
-        url = `${ex.url}?symbol=${symbol}&interval=${intervalStr}&limit=${lim}`;
-        break;
+        return `${ex.url}?symbol=${s}&interval=${istr}&limit=${lim}`;
       case "bybit":
-        url = `${ex.url}?symbol=${symbol}&interval=${intervalStr}&limit=${lim}`;
-        break;
+        return `${ex.url}?symbol=${s}&interval=${istr}&limit=${lim}`;
       case "okx":
-        url = `${ex.url}?instId=${symbol}&bar=${intervalStr}&limit=${lim}`;
-        break;
+        return `${ex.url}?instId=${s}&bar=${istr}&limit=${lim}`;
       case "mexc":
-        url = `${ex.url}?symbol=${symbol}&interval=${intervalStr}&limit=${lim}`;
-        break;
+        return `${ex.url}?symbol=${s}&interval=${istr}&limit=${lim}`;
       case "coinbase": {
-        const granularity =
-          intervalStr === "1h"
+        const g =
+          istr === "1h"
             ? 3600
-            : intervalStr === "15m"
+            : istr === "15m"
               ? 900
-              : intervalStr === "2h"
+              : istr === "2h"
                 ? 7200
-                : intervalStr === "4h"
+                : istr === "4h"
                   ? 14400
                   : 86400;
-        url = `${ex.url}/${symbol}/candles?granularity=${granularity}`;
-        break;
+        return `${ex.url}/${s}/candles?granularity=${g}`;
       }
       case "htx":
-        url = `${ex.url}?symbol=${symbol}&period=${intervalStr}&size=${lim}`;
-        break;
+        return `${ex.url}?symbol=${s}&period=${istr}&size=${lim}`;
       case "kucoin":
-        url = `${ex.url}?symbol=${symbol}&type=${intervalStr}&limit=${lim}`;
-        break;
+        return `${ex.url}?symbol=${s}&type=${istr}&limit=${lim}`;
       default:
         return null;
     }
-    return url;
   }
-
-  _clampLimit(exId, limit) {
+  _clampLimit(id, limit) {
     const max = {
       binance: 1000,
       mexc: 1000,
@@ -625,13 +538,12 @@ class DataLoader {
       htx: 2000,
       kucoin: 1500,
     };
-    return Math.min(limit, max[exId] || 1000);
+    return Math.min(limit, max[id] || 1000);
   }
-
-  _parse(data, exId) {
+  _parse(data, id) {
     try {
       let raw = [];
-      switch (exId) {
+      switch (id) {
         case "binance":
         case "mexc":
           raw = Array.isArray(data)
@@ -706,43 +618,31 @@ class DataLoader {
       }
       return this._normalizeCandles(raw);
     } catch (e) {
-      console.warn("Ошибка парсинга данных от", exId, e);
       return [];
     }
   }
-
-  // ФИКС: мержим дубликаты вместо затирания
+  // ФИКС: мержим дубликаты
   _normalizeCandles(candles) {
     const byTime = new Map();
     for (const c of candles) {
       if (!c || !Number.isFinite(c.time) || !Number.isFinite(c.close)) continue;
-      const existing = byTime.get(c.time);
-      if (existing) {
-        existing.high = Math.max(existing.high, c.high);
-        existing.low = Math.min(existing.low, c.low);
-        existing.close = c.close;
-        existing.volume = Math.max(existing.volume, c.volume);
-      } else {
-        byTime.set(c.time, c);
-      }
+      const e = byTime.get(c.time);
+      if (e) {
+        e.high = Math.max(e.high, c.high);
+        e.low = Math.min(e.low, c.low);
+        e.close = c.close;
+        e.volume = Math.max(e.volume, c.volume);
+      } else byTime.set(c.time, c);
     }
     return [...byTime.values()].sort((a, b) => a.time - b.time);
   }
 }
 
-// ---------- Расчёт индикаторов ----------
+// ---------- IndicatorCalculator ----------
 class IndicatorCalculator {
   constructor() {
     this.cache = new Map();
   }
-
-  getCached(asset, tf) {
-    return this.cache.get(`${asset}_${tf}`);
-  }
-  setCached(asset, tf, data) {
-    this.cache.set(`${asset}_${tf}`, data);
-  }
-
   calculateAll(candles, tf) {
     if (!candles || candles.length < CONFIG.minCandlesRequired) return null;
     const closes = candles.map((c) => c.close);
@@ -806,7 +706,6 @@ class IndicatorCalculator {
 
     const vol = volumes[volumes.length - 1] || 0;
     const volAvg = volumes.slice(-20).reduce((a, b) => a + b, 0) / 20 || 1;
-
     const close = closes[closes.length - 1];
     const trendStrength = (close - e50) / (atr || 0.01);
 
@@ -832,44 +731,31 @@ class IndicatorCalculator {
       volAvg,
       close,
       trendStrength,
-      _rsi: rsi,
-      _macd: macd,
-      _ema8: ema8,
-      _ema13: ema13,
-      _ema21: ema21,
-      _ema50: ema50,
-      _atr: atrArr,
-      _cvd: cvdArr,
-      _bb: bb,
-      _volumes: volumes,
-      _closes: closes,
     };
   }
-
   _rsi(data, period) {
     if (data.length < period + 1) return [50];
-    const changes = [];
-    for (let i = 1; i < data.length; i++) changes.push(data[i] - data[i - 1]);
-    let avgGain = 0,
-      avgLoss = 0;
-    const len = Math.min(period, changes.length);
+    const ch = [];
+    for (let i = 1; i < data.length; i++) ch.push(data[i] - data[i - 1]);
+    let ag = 0,
+      al = 0;
+    const len = Math.min(period, ch.length);
     for (let i = 0; i < len; i++) {
-      if (changes[i] >= 0) avgGain += changes[i];
-      else avgLoss += Math.abs(changes[i]);
+      if (ch[i] >= 0) ag += ch[i];
+      else al += Math.abs(ch[i]);
     }
-    avgGain /= period;
-    avgLoss /= period || 1;
-    const rsi = [100 - 100 / (1 + avgGain / (avgLoss || 1))];
-    for (let i = period; i < changes.length; i++) {
-      const gain = changes[i] >= 0 ? changes[i] : 0;
-      const loss = changes[i] < 0 ? Math.abs(changes[i]) : 0;
-      avgGain = (avgGain * (period - 1) + gain) / period;
-      avgLoss = (avgLoss * (period - 1) + loss) / period;
-      rsi.push(100 - 100 / (1 + avgGain / (avgLoss || 1)));
+    ag /= period;
+    al /= period || 1;
+    const rsi = [100 - 100 / (1 + ag / (al || 1))];
+    for (let i = period; i < ch.length; i++) {
+      const g = ch[i] >= 0 ? ch[i] : 0;
+      const l = ch[i] < 0 ? Math.abs(ch[i]) : 0;
+      ag = (ag * (period - 1) + g) / period;
+      al = (al * (period - 1) + l) / period;
+      rsi.push(100 - 100 / (1 + ag / (al || 1)));
     }
     return rsi;
   }
-
   _ema(data, period) {
     if (!data.length) return [];
     const ema = [];
@@ -879,26 +765,22 @@ class IndicatorCalculator {
       if (i < period) {
         sum += data[i];
         ema.push(sum / (i + 1));
-      } else {
-        ema.push(data[i] * k + ema[i - 1] * (1 - k));
-      }
+      } else ema.push(data[i] * k + ema[i - 1] * (1 - k));
     }
     return ema;
   }
-
-  // ФИКС: корректные индексы MACD без хрупких слайсов
+  // ФИКС: корректные индексы MACD
   _macd(data, fast, slow, signal) {
     if (data.length < slow + signal)
       return { macd: [], signal: [], histogram: [] };
-    const emaFast = this._ema(data, fast);
-    const emaSlow = this._ema(data, slow);
-    const macdLine = emaFast.map((v, i) => v - emaSlow[i]);
+    const ef = this._ema(data, fast);
+    const es = this._ema(data, slow);
+    const macdLine = ef.map((v, i) => v - es[i]);
     const macdForSignal = macdLine.slice(slow - 1);
     const signalLine = this._ema(macdForSignal, signal);
     const histogram = macdForSignal.map((v, i) => v - signalLine[i]);
     return { macd: macdForSignal, signal: signalLine, histogram };
   }
-
   _atr(candles, period) {
     if (candles.length < period + 1) return [0.01];
     const tr = [];
@@ -914,76 +796,70 @@ class IndicatorCalculator {
       if (i < period) {
         sum += tr[i];
         atr.push(sum / (i + 1));
-      } else {
-        atr.push((atr[i - 1] * (period - 1) + tr[i]) / period);
-      }
+      } else atr.push((atr[i - 1] * (period - 1) + tr[i]) / period);
     }
     return atr;
   }
-
-  // ФИКС: бакеты привязаны к minP, а не к абсолютной цене
+  // ФИКС: POC от minP
   _poc(candles) {
     if (!candles.length) return 0;
     const minP = Math.min(...candles.map((c) => c.low));
     const maxP = Math.max(...candles.map((c) => c.high));
-    const bucketSize = (maxP - minP) / 50 || 0.01;
-    const priceLevels = new Map();
+    const bs = (maxP - minP) / 50 || 0.01;
+    const levels = new Map();
     candles.forEach((c) => {
-      const bucket = Math.floor((c.close - minP) / bucketSize);
-      priceLevels.set(bucket, (priceLevels.get(bucket) || 0) + c.volume);
+      const b = Math.floor((c.close - minP) / bs);
+      levels.set(b, (levels.get(b) || 0) + c.volume);
     });
-    let maxVol = 0,
-      bestBucket = 0;
-    for (const [b, v] of priceLevels) {
-      if (v > maxVol) {
-        maxVol = v;
-        bestBucket = b;
+    let mv = 0,
+      bb = 0;
+    for (const [b, v] of levels)
+      if (v > mv) {
+        mv = v;
+        bb = b;
       }
-    }
-    return minP + (bestBucket + 0.5) * bucketSize;
+    return minP + (bb + 0.5) * bs;
   }
-
   _cvd(candles) {
     if (candles.length < 2) return [];
     const cvd = [];
     let cum = 0;
     for (let i = 1; i < candles.length; i++) {
-      const change = candles[i].close - candles[i - 1].close;
+      const ch = candles[i].close - candles[i - 1].close;
       const vol = candles[i].volume;
       const delta =
-        change > 0
-          ? vol * (change / candles[i - 1].close)
-          : change < 0
-            ? -vol * (Math.abs(change) / candles[i - 1].close)
+        ch > 0
+          ? vol * (ch / candles[i - 1].close)
+          : ch < 0
+            ? -vol * (Math.abs(ch) / candles[i - 1].close)
             : 0;
       cum += delta;
       cvd.push(cum);
     }
     return cvd;
   }
-
-  _bb(data, period, stdDev) {
+  _bb(data, period, sd) {
     if (data.length < period) return { upper: [], middle: [], lower: [] };
     const upper = [],
       middle = [],
       lower = [];
     for (let i = period - 1; i < data.length; i++) {
-      const slice = data.slice(i - period + 1, i + 1);
-      const mean = slice.reduce((a, b) => a + b, 0) / period;
-      const variance = slice.reduce((a, b) => a + (b - mean) ** 2, 0) / period;
-      const std = Math.sqrt(variance);
-      middle.push(mean);
-      upper.push(mean + stdDev * std);
-      lower.push(mean - stdDev * std);
+      const s = data.slice(i - period + 1, i + 1);
+      const m = s.reduce((a, b) => a + b, 0) / period;
+      const v = s.reduce((a, b) => a + (b - m) ** 2, 0) / period;
+      const st = Math.sqrt(v);
+      middle.push(m);
+      upper.push(m + sd * st);
+      lower.push(m - sd * st);
     }
     return { upper, middle, lower };
   }
 }
 
-// ---------- Генератор сигналов ----------
+// ---------- SignalGenerator ----------
 class SignalGenerator {
-  constructor(indicatorCalc) {
-    this.indicatorCalc = indicatorCalc;
+  constructor(ic) {
+    this.indicatorCalc = ic;
   }
 
   generate(asset, tf, candles) {
@@ -992,11 +868,10 @@ class SignalGenerator {
     const ind = this.indicatorCalc.calculateAll(candles, tf);
     if (!ind) return this._emptySignal(asset, tf);
 
-    const cfg = CONFIG.trading;
     const sc = CONFIG.scoring;
-    const W = sc.weights;
-    const G = sc.gradations;
-    const totalWeight = Object.values(W).reduce((s, v) => s + v, 0) || 1;
+    const W = sc.weights,
+      G = sc.gradations;
+    const totalW = Object.values(W).reduce((s, v) => s + v, 0) || 1;
 
     let buyRaw = 0,
       sellRaw = 0;
@@ -1005,26 +880,25 @@ class SignalGenerator {
 
     // RSI
     {
-      const rsi = ind.rsi,
-        w = W.rsi,
-        g = G.rsi;
+      const w = W.rsi,
+        g = G.rsi,
+        r = ind.rsi;
       let raw = 0;
-      if (rsi < 10) raw = w * g.extreme;
-      else if (rsi > 90) raw = -w * g.extreme;
-      else if (rsi < 20) raw = w * g.strong;
-      else if (rsi > 80) raw = -w * g.strong;
-      else if (rsi < 30) raw = w * g.normal;
-      else if (rsi > 70) raw = -w * g.normal;
-      else if (rsi < 40) raw = w * g.weak;
-      else if (rsi > 60) raw = -w * g.weak;
+      if (r < 10) raw = w * g.extreme;
+      else if (r > 90) raw = -w * g.extreme;
+      else if (r < 20) raw = w * g.strong;
+      else if (r > 80) raw = -w * g.strong;
+      else if (r < 30) raw = w * g.normal;
+      else if (r > 70) raw = -w * g.normal;
+      else if (r < 40) raw = w * g.weak;
+      else if (r > 60) raw = -w * g.weak;
       if (raw > 0) buyRaw += raw;
       else sellRaw += -raw;
-      scores.rsi = (raw / totalWeight) * 100;
+      scores.rsi = (raw / totalW) * 100;
       indicatorStates.rsi = {
         value: Math.round(ind.rsi),
         bias:
           ind.rsi < 30 ? "oversold" : ind.rsi > 70 ? "overbought" : "neutral",
-        contribution: scores.rsi,
       };
     }
 
@@ -1032,34 +906,32 @@ class SignalGenerator {
     {
       const w = W.macd,
         g = G.macd,
-        hist = ind.macdHist;
+        h = ind.macdHist;
       let raw = 0;
-      if (hist > 0 && ind.macdLine > ind.macdSignal) raw = w * g.main;
-      else if (hist < 0 && ind.macdLine < ind.macdSignal) raw = -w * g.main;
-      else if (hist > ind.macdPrevHist) raw = w * g.trend;
-      else if (hist < ind.macdPrevHist) raw = -w * g.trend;
+      if (h > 0 && ind.macdLine > ind.macdSignal) raw = w * g.main;
+      else if (h < 0 && ind.macdLine < ind.macdSignal) raw = -w * g.main;
+      else if (h > ind.macdPrevHist) raw = w * g.trend;
+      else if (h < ind.macdPrevHist) raw = -w * g.trend;
       if (raw > 0) buyRaw += raw;
       else sellRaw += -raw;
-      scores.macd = (raw / totalWeight) * 100;
+      scores.macd = (raw / totalW) * 100;
       indicatorStates.macd = {
         value: ind.macdHist.toFixed(4),
         bias:
-          ind.macdHist > 0 && ind.macdLine > ind.macdSignal
+          h > 0 && ind.macdLine > ind.macdSignal
             ? "bullish"
-            : ind.macdHist < 0 && ind.macdLine < ind.macdSignal
+            : h < 0 && ind.macdLine < ind.macdSignal
               ? "bearish"
-              : ind.macdHist > ind.macdPrevHist
+              : h > ind.macdPrevHist
                 ? "growing"
                 : "falling",
-        contribution: scores.macd,
       };
     }
 
-    // EMA Ribbon
+    // EMA
     {
       const w = W.ema,
         c = ind.close;
-      let raw = 0;
       const fullBull =
         c > ind.ema8 &&
         ind.ema8 > ind.ema13 &&
@@ -1070,14 +942,12 @@ class SignalGenerator {
         ind.ema8 < ind.ema13 &&
         ind.ema13 < ind.ema21 &&
         ind.ema21 < ind.ema50;
-      if (fullBull) raw = w;
-      else if (fullBear) raw = -w;
+      let raw = fullBull ? w : fullBear ? -w : 0;
       if (raw > 0) buyRaw += raw;
       else sellRaw += -raw;
-      scores.ema = (raw / totalWeight) * 100;
+      scores.ema = (raw / totalW) * 100;
       indicatorStates.ema = {
         bias: fullBull ? "full-bull" : fullBear ? "full-bear" : "mixed",
-        contribution: scores.ema,
       };
     }
 
@@ -1089,7 +959,7 @@ class SignalGenerator {
       else if (ind.cvd < ind.cvdPrev && ind.cvd < 0) raw = -w;
       if (raw > 0) buyRaw += raw;
       else sellRaw += -raw;
-      scores.cvd = (raw / totalWeight) * 100;
+      scores.cvd = (raw / totalW) * 100;
       indicatorStates.cvd = {
         value: ind.cvd.toFixed(0),
         bias:
@@ -1098,11 +968,10 @@ class SignalGenerator {
             : ind.cvd < ind.cvdPrev
               ? "falling"
               : "flat",
-        contribution: scores.cvd,
       };
     }
 
-    // Bollinger
+    // BB
     {
       const w = W.bb,
         g = G.bb,
@@ -1114,7 +983,7 @@ class SignalGenerator {
       else if (ind.bbWidth < 0.1 && c < ind.bbMiddle) raw = -w * g.squeeze;
       if (raw > 0) buyRaw += raw;
       else sellRaw += -raw;
-      scores.bb = (raw / totalWeight) * 100;
+      scores.bb = (raw / totalW) * 100;
       indicatorStates.bb = {
         width: (ind.bbWidth * 100).toFixed(1) + "%",
         position:
@@ -1126,7 +995,6 @@ class SignalGenerator {
                 ? "above-middle"
                 : "below-middle",
         squeeze: ind.bbWidth < 0.1,
-        contribution: scores.bb,
       };
     }
 
@@ -1134,18 +1002,14 @@ class SignalGenerator {
     {
       const w = W.volume,
         c = ind.close;
-      const volRatio = ind.volume / (ind.volAvg || 1);
+      const vr = ind.volume / (ind.volAvg || 1);
       let raw = 0;
-      if (volRatio > 1.5 && c > ind.ema8) raw = w;
-      else if (volRatio > 1.5 && c < ind.ema8) raw = -w;
+      if (vr > 1.5 && c > ind.ema8) raw = w;
+      else if (vr > 1.5 && c < ind.ema8) raw = -w;
       if (raw > 0) buyRaw += raw;
       else sellRaw += -raw;
-      scores.volume = (raw / totalWeight) * 100;
-      indicatorStates.volume = {
-        ratio: volRatio.toFixed(2),
-        spike: volRatio > 1.5,
-        contribution: scores.volume,
-      };
+      scores.volume = (raw / totalW) * 100;
+      indicatorStates.volume = { ratio: vr.toFixed(2), spike: vr > 1.5 };
     }
 
     // POC
@@ -1153,23 +1017,22 @@ class SignalGenerator {
       const w = W.poc,
         c = ind.close;
       const atr = ind.atr || 0.01;
-      const pocDist = Math.abs(c - ind.poc) / atr;
+      const pd = Math.abs(c - ind.poc) / atr;
       let raw = 0;
-      if (pocDist < 0.2 && c > ind.ema8) raw = w;
-      else if (pocDist < 0.2 && c < ind.ema8) raw = -w;
+      if (pd < 0.2 && c > ind.ema8) raw = w;
+      else if (pd < 0.2 && c < ind.ema8) raw = -w;
       if (raw > 0) buyRaw += raw;
       else sellRaw += -raw;
-      scores.poc = (raw / totalWeight) * 100;
+      scores.poc = (raw / totalW) * 100;
       indicatorStates.poc = {
         value: ind.poc.toFixed(2),
         distance: ((c - ind.poc) / atr).toFixed(2) + " ATR",
-        near: pocDist < 0.2,
-        contribution: scores.poc,
+        near: pd < 0.2,
       };
     }
 
     const netRaw = buyRaw - sellRaw;
-    const netScore = (netRaw / totalWeight) * 100;
+    const netScore = (netRaw / totalW) * 100;
     const confidence = Math.round(utils.clamp(Math.abs(netScore), 0, 100));
 
     const scoresPct = {};
@@ -1191,14 +1054,14 @@ class SignalGenerator {
     if (
       buyAligned &&
       htfBuy &&
-      confidence >= cfg.minConfidence &&
+      confidence >= CONFIG.trading.minConfidence &&
       netScore > sc.strongThreshold
     )
       direction = "BUY";
     else if (
       sellAligned &&
       htfSell &&
-      confidence >= cfg.minConfidence &&
+      confidence >= CONFIG.trading.minConfidence &&
       netScore < -sc.strongThreshold
     )
       direction = "SELL";
@@ -1208,7 +1071,7 @@ class SignalGenerator {
       sellRaw,
       ind.trendStrength,
       ind.bbWidth,
-      totalWeight,
+      totalW,
     );
 
     return {
@@ -1240,22 +1103,20 @@ class SignalGenerator {
   }
 
   _isEntryAligned(ind, side) {
-    const rsi = ind.rsi;
-    const macdRising = ind.macdHist > ind.macdPrevHist;
-    const macdFalling = ind.macdHist < ind.macdPrevHist;
-    const cfg = CONFIG.trading;
+    const r = ind.rsi;
+    const mr = ind.macdHist > ind.macdPrevHist;
+    const mf = ind.macdHist < ind.macdPrevHist;
+    const c = CONFIG.trading;
     if (side === "BUY")
-      return ind.close > ind.ema50 && macdRising && rsi < cfg.rsiOverbought;
-    return ind.close < ind.ema50 && macdFalling && rsi > cfg.rsiOversold;
+      return ind.close > ind.ema50 && mr && r < c.rsiOverbought;
+    return ind.close < ind.ema50 && mf && r > c.rsiOversold;
   }
-
   _htfFor(tf) {
-    const minutes = CONFIG.tfMinutes[tf] || 60;
-    if (minutes < CONFIG.tfMinutes["4h"]) return "4h";
-    if (minutes < CONFIG.tfMinutes["1d"]) return "1d";
+    const m = CONFIG.tfMinutes[tf] || 60;
+    if (m < CONFIG.tfMinutes["4h"]) return "4h";
+    if (m < CONFIG.tfMinutes["1d"]) return "1d";
     return null;
   }
-
   _htfConfirms(tf, candles, side) {
     if (!CONFIG.trading.requireHtfConfirm) return true;
     const htf = this._htfFor(tf);
@@ -1266,33 +1127,30 @@ class SignalGenerator {
     if (!ind) return false;
     return side === "BUY" ? ind.close > ind.ema50 : ind.close < ind.ema50;
   }
-
-  _calcActionProbs(buyRaw, sellRaw, trendStrength, bbWidth, totalWeight) {
-    const denom = totalWeight || 1;
-    let buyProb = Math.min((buyRaw / denom) * 100, 100);
-    let sellProb = Math.min((sellRaw / denom) * 100, 100);
-
-    if (bbWidth < 0.05) {
-      buyProb *= 0.7;
-      sellProb *= 0.7;
+  _calcActionProbs(buyRaw, sellRaw, ts, bw, tw) {
+    const d = tw || 1;
+    let bp = Math.min((buyRaw / d) * 100, 100);
+    let sp = Math.min((sellRaw / d) * 100, 100);
+    if (bw < 0.05) {
+      bp *= 0.7;
+      sp *= 0.7;
     }
-    if (Math.abs(trendStrength) > 2) {
-      if (trendStrength > 0) {
-        buyProb = Math.min(buyProb * 1.3, 100);
-        sellProb *= 0.7;
+    if (Math.abs(ts) > 2) {
+      if (ts > 0) {
+        bp = Math.min(bp * 1.3, 100);
+        sp *= 0.7;
       } else {
-        sellProb = Math.min(sellProb * 1.3, 100);
-        buyProb *= 0.7;
+        sp = Math.min(sp * 1.3, 100);
+        bp *= 0.7;
       }
     }
-    const waitProb = Math.max(100 - (buyProb + sellProb), 0);
+    const wp = Math.max(100 - (bp + sp), 0);
     return {
-      wait: Math.round(utils.clamp(waitProb, 0, 100)),
-      buy: Math.round(utils.clamp(buyProb, 0, 100)),
-      sell: Math.round(utils.clamp(sellProb, 0, 100)),
+      wait: Math.round(utils.clamp(wp, 0, 100)),
+      buy: Math.round(utils.clamp(bp, 0, 100)),
+      sell: Math.round(utils.clamp(sp, 0, 100)),
     };
   }
-
   _emptySignal(asset, tf) {
     const safeTf = tf || CONFIG.defaultTF;
     const emptyScores = {
@@ -1305,18 +1163,13 @@ class SignalGenerator {
       poc: 0,
     };
     const emptyStates = {
-      rsi: { value: 0, bias: "neutral", contribution: 0 },
-      macd: { value: "0.0000", bias: "flat", contribution: 0 },
-      ema: { bias: "mixed", contribution: 0 },
-      cvd: { value: "0", bias: "flat", contribution: 0 },
-      bb: {
-        width: "0%",
-        position: "above-middle",
-        squeeze: false,
-        contribution: 0,
-      },
-      volume: { ratio: "0.00", spike: false, contribution: 0 },
-      poc: { value: "0", distance: "0 ATR", near: false, contribution: 0 },
+      rsi: { value: 0, bias: "neutral" },
+      macd: { value: "0.0000", bias: "flat" },
+      ema: { bias: "mixed" },
+      cvd: { value: "0", bias: "flat" },
+      bb: { width: "0%", position: "above-middle", squeeze: false },
+      volume: { ratio: "0.00", spike: false },
+      poc: { value: "0", distance: "0 ATR", near: false },
     };
     return {
       asset,
@@ -1346,140 +1199,104 @@ class SignalGenerator {
   }
 }
 
-// ---------- Бэктестер ----------
+// ---------- Backtester ----------
 class Backtester {
-  constructor(signalGenerator) {
-    this.signalGen = signalGenerator;
+  constructor(sg) {
+    this.signalGen = sg;
     this.tradeHistory = [];
-    this.stats = {
-      totalTrades: 0,
-      wins: 0,
-      losses: 0,
-      totalProfit: 0,
-      winRate: 0,
-    };
   }
-
   async run(asset, candles, tf) {
     if (!candles || candles.length < 100) return [];
     const agg = utils.aggregateCandles(candles, tf);
     if (agg.length < 100) return [];
-
     const trades = [];
     let position = null;
-    const config = CONFIG.trading;
-
-    // ФИКС: шаг 3 бара вместо 1 — снижаем нагрузку в 3 раза
+    const c = CONFIG.trading;
     const STEP = 3;
     for (let i = 100; i < agg.length; i += STEP) {
-      const windowCandles = agg.slice(0, i + 1);
-      const current = agg[i];
-      const price = current.close;
-      const signal = this.signalGen.generate(asset, tf, windowCandles);
-
+      const win = agg.slice(0, i + 1);
+      const cur = agg[i];
+      const price = cur.close;
+      const sig = this.signalGen.generate(asset, tf, win);
       if (position) {
         const move =
           position.direction === "BUY"
             ? price - position.entryPrice
             : position.entryPrice - price;
-        const isOpposite =
-          signal &&
-          signal.confidence >= config.minConfidence &&
-          ((position.direction === "BUY" && signal.direction === "SELL") ||
-            (position.direction === "SELL" && signal.direction === "BUY"));
-
+        const opp =
+          sig &&
+          sig.confidence >= c.minConfidence &&
+          ((position.direction === "BUY" && sig.direction === "SELL") ||
+            (position.direction === "SELL" && sig.direction === "BUY"));
         if (move >= position.takeProfitDistance) {
-          trades.push(
-            this._closePosition(position, price, current.time, "take_profit"),
-          );
+          trades.push(this._close(position, price, cur.time, "take_profit"));
           position = null;
         } else if (move <= -position.stopDistance) {
-          trades.push(
-            this._closePosition(position, price, current.time, "stop_loss"),
-          );
+          trades.push(this._close(position, price, cur.time, "stop_loss"));
           position = null;
         } else if (i - (position.entryIndex ?? i) > 50) {
-          trades.push(
-            this._closePosition(position, price, current.time, "timeout"),
-          );
+          trades.push(this._close(position, price, cur.time, "timeout"));
           position = null;
-        } else if (isOpposite) {
-          trades.push(
-            this._closePosition(
-              position,
-              price,
-              current.time,
-              "reverse_signal",
-            ),
-          );
+        } else if (opp) {
+          trades.push(this._close(position, price, cur.time, "reverse_signal"));
           position = null;
         }
       }
-
       if (
         !position &&
-        signal &&
-        (signal.direction === "BUY" || signal.direction === "SELL") &&
-        signal.confidence >= config.minConfidence
+        sig &&
+        (sig.direction === "BUY" || sig.direction === "SELL") &&
+        sig.confidence >= c.minConfidence
       ) {
-        const levels = this._atrExitLevels(price, signal.atr, config);
+        const lv = this._atrLevels(price, sig.atr, c);
         position = {
           asset,
-          direction: signal.direction,
+          direction: sig.direction,
           entryPrice: price,
-          entryTime: current.time,
-          entryConfidence: signal.confidence,
+          entryTime: cur.time,
+          entryConfidence: sig.confidence,
           entryIndex: i,
-          stopDistance: levels.stopDistance,
-          takeProfitDistance: levels.takeProfitDistance,
+          stopDistance: lv.stopDistance,
+          takeProfitDistance: lv.takeProfitDistance,
         };
       }
     }
-
     if (position) {
       const last = agg[agg.length - 1];
-      trades.push(
-        this._closePosition(position, last.close, last.time, "timeout"),
-      );
+      trades.push(this._close(position, last.close, last.time, "timeout"));
     }
-
     this.tradeHistory = trades.sort((a, b) => b.exitTime - a.exitTime);
-    this._updateStats();
     return this.tradeHistory;
   }
-
   computeStats(trades) {
-    const list = trades || [];
-    const total = list.length;
-    if (total === 0)
+    const l = trades || [];
+    const t = l.length;
+    if (t === 0)
       return { totalTrades: 0, wins: 0, losses: 0, totalProfit: 0, winRate: 0 };
-    const wins = list.filter((t) => t.profit > 0).length;
-    const losses = list.filter((t) => t.profit < 0).length;
-    const totalProfit = list.reduce((s, t) => s + t.profit, 0);
+    const w = l.filter((x) => x.profit > 0).length;
+    const ls = l.filter((x) => x.profit < 0).length;
+    const p = l.reduce((s, x) => s + x.profit, 0);
     return {
-      totalTrades: total,
-      wins,
-      losses,
-      totalProfit,
-      winRate: (wins / total) * 100,
+      totalTrades: t,
+      wins: w,
+      losses: ls,
+      totalProfit: p,
+      winRate: (w / t) * 100,
     };
   }
-
-  _atrExitLevels(entryPrice, atr, config) {
+  _atrLevels(ep, atr, c) {
     const n = Number(atr);
-    const hasAtr = Number.isFinite(n) && n > 0;
-    const stopDistance = hasAtr
-      ? config.stopAtrMult * n
-      : entryPrice * (config.maxLossPercent / 100);
-    const takeProfitDistance = hasAtr
-      ? config.takeProfitAtrMult * n
-      : entryPrice * (config.minProfitPercent / 100);
-    return { stopDistance, takeProfitDistance };
+    const ok = Number.isFinite(n) && n > 0;
+    return {
+      stopDistance: ok ? c.stopAtrMult * n : ep * (c.maxLossPercent / 100),
+      takeProfitDistance: ok
+        ? c.takeProfitAtrMult * n
+        : ep * (c.minProfitPercent / 100),
+    };
   }
-
-  _closePosition(pos, exitPrice, exitTime, reason) {
-    const profitPercent = ((exitPrice - pos.entryPrice) / pos.entryPrice) * 100;
-    const profit = pos.direction === "BUY" ? profitPercent : -profitPercent;
+  _close(pos, exitPrice, exitTime, reason) {
+    const pp = ((exitPrice - pos.entryPrice) / pos.entryPrice) * 100;
+    const profit = pos.direction === "BUY" ? pp : -pp;
     return {
       asset: pos.asset || "UNKNOWN",
       direction: pos.direction,
@@ -1493,13 +1310,9 @@ class Backtester {
       exitReason: reason,
     };
   }
-
-  _updateStats() {
-    this.stats = this.computeStats(this.tradeHistory);
-  }
 }
 
-// ---------- WebSocket менеджер ----------
+// ---------- WSManager ----------
 class WSManager {
   constructor(onKline) {
     this.onKline = onKline;
@@ -1511,7 +1324,6 @@ class WSManager {
     this._skipReconnect = false;
     this.onStatus = null;
   }
-
   connect() {
     this._stopped = false;
     if (
@@ -1532,14 +1344,13 @@ class WSManager {
       this.ws.onopen = () => {
         this.connected = true;
         this.reconnectAttempts = 0;
-        console.log("🔌 WebSocket подключен");
         if (this.onStatus) this.onStatus(true);
       };
       this.ws.onmessage = (ev) => {
         try {
-          const parsed = JSON.parse(ev.data);
-          const payload = parsed.data || parsed;
-          if (payload && payload.k) this.onKline(payload);
+          const p = JSON.parse(ev.data);
+          const d = p.data || p;
+          if (d && d.k) this.onKline(d);
         } catch (e) {}
       };
       this.ws.onclose = () => {
@@ -1550,36 +1361,28 @@ class WSManager {
           return;
         }
         if (this._stopped) return;
-        console.log("WebSocket закрыт, переподключение...");
         this._reconnect();
       };
-      this.ws.onerror = () => {
-        console.warn("⚠️ WebSocket ошибка");
-      };
+      this.ws.onerror = () => {};
     } catch (e) {
-      console.warn("⚠️ Ошибка создания WebSocket", e);
       this._reconnect();
     }
   }
-
   _reconnect() {
     if (this._stopped || this.reconnectAttempts >= this.maxAttempts) return;
     this.reconnectAttempts++;
-    const delay = Math.min(1000 * this.reconnectAttempts, 30000);
+    const d = Math.min(1000 * this.reconnectAttempts, 30000);
     setTimeout(() => {
       if (!this.connected && !this._stopped) this.connect();
-    }, delay);
+    }, d);
   }
-
   close() {
     this._stopped = true;
     if (this.ws) this.ws.close();
   }
 }
 
-// ============================================================
-//  Fear & Greed Index Manager
-// ============================================================
+// ---------- FearGreedManager ----------
 class FearGreedManager {
   constructor({ intervalMs = 5 * 60 * 1000, neutralFallback = 50 } = {}) {
     this.intervalMs = intervalMs;
@@ -1590,30 +1393,22 @@ class FearGreedManager {
     this._timerId = null;
     this._abort = null;
   }
-
   start() {
     this._el.marker = document.getElementById("fngMarker");
     this._el.value = document.getElementById("fngValue");
-    if (!this._el.marker || !this._el.value) {
-      console.warn("⚠️ F&G: элементы #fngMarker / #fngValue не найдены в DOM");
-      return;
-    }
-    console.log("🟢 F&G: start() — элементы найдены, запускаю");
+    if (!this._el.marker || !this._el.value) return;
     this._set(this.neutralFallback);
     this._fetch();
     this._timerId = setInterval(() => this._fetch(), this.intervalMs);
   }
-
   stop() {
     if (this._timerId) clearInterval(this._timerId);
     if (this._rafId) cancelAnimationFrame(this._rafId);
     if (this._abort) this._abort.abort();
   }
-
   async _fetch() {
     if (this._abort) this._abort.abort();
     this._abort = new AbortController();
-
     const sources = [
       "https://api.alternative.me/fng/?limit=1&format=json",
       "https://corsproxy.io/?" +
@@ -1621,63 +1416,47 @@ class FearGreedManager {
       "https://api.allorigins.win/raw?url=" +
         encodeURIComponent("https://api.alternative.me/fng/?limit=1"),
     ];
-
     for (const url of sources) {
       try {
-        console.log("🌐 F&G: запрос", url);
-        const resp = await fetch(url, {
+        const r = await fetch(url, {
           signal: this._abort.signal,
           cache: "no-store",
           headers: { Accept: "application/json" },
         });
-        if (!resp.ok) throw new Error("HTTP " + resp.status);
-        const json = await resp.json();
-        const raw = json?.data?.[0]?.value ?? json?.value;
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        const j = await r.json();
+        const raw = j?.data?.[0]?.value ?? j?.value;
         const v = parseInt(raw, 10);
         if (Number.isFinite(v)) {
-          console.log(
-            "✅ F&G:",
-            v,
-            "—",
-            json?.data?.[0]?.value_classification || this._classify(v),
-          );
           this._set(v);
           return;
         }
       } catch (e) {
         if (e.name === "AbortError") return;
-        console.warn("⚠️ F&G источник не сработал:", url, e.message);
       }
     }
-    console.warn(
-      "⚠️ F&G: все источники недоступны, оставляю",
-      this.neutralFallback,
-    );
     this._set(this.neutralFallback);
   }
-
   _set(v) {
-    const clamped = Math.max(0, Math.min(100, v));
-    if (clamped === this._lastValue) return;
-    this._lastValue = clamped;
-
+    const c = Math.max(0, Math.min(100, v));
+    if (c === this._lastValue) return;
+    this._lastValue = c;
     if (this._rafId) cancelAnimationFrame(this._rafId);
     this._rafId = requestAnimationFrame(() => {
       const { marker, value } = this._el;
-      if (marker) marker.style.left = clamped + "%";
+      if (marker) marker.style.left = c + "%";
       if (value) {
-        value.textContent = `${clamped} ${this._classify(clamped)}`;
+        value.textContent = `${c} ${this._classify(c)}`;
         let color = "#fbbf24";
-        if (clamped < 25) color = "#ef4444";
-        else if (clamped < 45) color = "#f97316";
-        else if (clamped < 55) color = "#fbbf24";
-        else if (clamped < 75) color = "#84cc16";
+        if (c < 25) color = "#ef4444";
+        else if (c < 45) color = "#f97316";
+        else if (c < 55) color = "#fbbf24";
+        else if (c < 75) color = "#84cc16";
         else color = "#22c55e";
         value.style.color = color;
       }
     });
   }
-
   _classify(v) {
     if (v < 25) return "Extreme Fear";
     if (v < 45) return "Fear";
@@ -1687,9 +1466,7 @@ class FearGreedManager {
   }
 }
 
-// ============================================================
-//  MARKET STATE WIDGET (Macro Heatmap)
-// ============================================================
+// ---------- MarketStateWidget ----------
 class MarketStateWidget {
   static CONFIG = {
     containerId: "market-state-widget",
@@ -1704,7 +1481,6 @@ class MarketStateWidget {
       breadth: { dominance: 0.4, altseason: 0.35, gainers: 0.25 },
     },
   };
-
   constructor(opts = {}) {
     this.cfg = { ...MarketStateWidget.CONFIG, ...opts };
     this._timer = null;
@@ -1713,12 +1489,9 @@ class MarketStateWidget {
     this._container = null;
     this._isOpen = false;
     this._isDocsOpen = false;
-
     this._onDocClick = (e) => {
-      if (!this._isOpen) return;
-      if (!this._container) return;
+      if (!this._isOpen || !this._container) return;
       const t = e.target;
-      // ФИКС: безопасная проверка Element
       if (t instanceof Element) {
         if (this._container.contains(t)) return;
         if (t.closest(".tf-btn")) return;
@@ -1727,86 +1500,71 @@ class MarketStateWidget {
       }
       this._close();
     };
-
     this._onKeyDown = (e) => {
       if (e.key === "Escape" && this._isOpen) this._close();
     };
   }
-
   start() {
     this._container = document.getElementById(this.cfg.containerId);
-    if (!this._container) {
-      console.warn(
-        `⚠️ MarketStateWidget: #${this.cfg.containerId} не найден в DOM`,
-      );
-      return;
-    }
+    if (!this._container) return;
     this._renderSkeleton();
-
     const cached = this._getCache();
     if (cached) {
       this._lastData = cached;
       this._render(cached);
     }
-
     this._refresh();
     this._timer = setInterval(() => this._refresh(), this.cfg.refreshMs);
-
     document.addEventListener("click", this._onDocClick);
     document.addEventListener("keydown", this._onKeyDown);
   }
-
   stop() {
     if (this._timer) clearInterval(this._timer);
-    this._timer = null;
     document.removeEventListener("click", this._onDocClick);
     document.removeEventListener("keydown", this._onKeyDown);
   }
-
   refreshNow() {
     return this._refresh(true);
   }
-
   _toggle() {
     this._isOpen ? this._close() : this._open();
   }
-
   _open() {
     this._isOpen = true;
-    const compact = this._container?.querySelector(".ms-compact");
-    const wrap = this._container?.querySelector(".ms-dropdown-wrap");
-    if (compact) compact.classList.add("ms-open");
-    if (wrap) wrap.classList.add("ms-open");
+    this._container?.querySelector(".ms-compact")?.classList.add("ms-open");
+    this._container
+      ?.querySelector(".ms-dropdown-wrap")
+      ?.classList.add("ms-open");
   }
-
   _close() {
     this._isOpen = false;
     this._isDocsOpen = false;
-    const compact = this._container?.querySelector(".ms-compact");
-    const wrap = this._container?.querySelector(".ms-dropdown-wrap");
-    const docs = this._container?.querySelector(".ms-docs-panel");
-    const arrow = this._container?.querySelector(".ms-docs-arrow");
-    if (compact) compact.classList.remove("ms-open");
-    if (wrap) wrap.classList.remove("ms-open");
-    if (docs) docs.classList.remove("ms-open");
-    if (arrow) arrow.classList.remove("ms-open");
+    this._container?.querySelector(".ms-compact")?.classList.remove("ms-open");
+    this._container
+      ?.querySelector(".ms-dropdown-wrap")
+      ?.classList.remove("ms-open");
+    this._container
+      ?.querySelector(".ms-docs-panel")
+      ?.classList.remove("ms-open");
+    this._container
+      ?.querySelector(".ms-docs-arrow")
+      ?.classList.remove("ms-open");
   }
-
   _toggleDocs() {
     this._isDocsOpen = !this._isDocsOpen;
-    const docs = this._container?.querySelector(".ms-docs-panel");
-    const arrow = this._container?.querySelector(".ms-docs-arrow");
-    if (docs) docs.classList.toggle("ms-open", this._isDocsOpen);
-    if (arrow) arrow.classList.toggle("ms-open", this._isDocsOpen);
+    this._container
+      ?.querySelector(".ms-docs-panel")
+      ?.classList.toggle("ms-open", this._isDocsOpen);
+    this._container
+      ?.querySelector(".ms-docs-arrow")
+      ?.classList.toggle("ms-open", this._isDocsOpen);
   }
-
   _clamp(v, a, b) {
     return Math.max(a, Math.min(b, v));
   }
-  _map(v, inMin, inMax, outMin = 0, outMax = 100) {
-    if (inMax === inMin) return outMin;
-    const t = (v - inMin) / (inMax - inMin);
-    return outMin + this._clamp(t, 0, 1) * (outMax - outMin);
+  _map(v, a, b, c = 0, d = 100) {
+    if (b === a) return c;
+    return c + this._clamp((v - a) / (b - a), 0, 1) * (d - c);
   }
   _log10(v) {
     return Math.log(Math.max(v, 1)) / Math.log(10);
@@ -1827,13 +1585,12 @@ class MarketStateWidget {
       second: "2-digit",
     });
   }
-
   async _fetchJSON(url) {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), this.cfg.timeout);
+    const c = new AbortController();
+    const t = setTimeout(() => c.abort(), this.cfg.timeout);
     try {
       const r = await fetch(url, {
-        signal: ctrl.signal,
+        signal: c.signal,
         headers: { Accept: "application/json" },
         cache: "no-store",
       });
@@ -1843,9 +1600,8 @@ class MarketStateWidget {
       clearTimeout(t);
     }
   }
-
   async _fetchAll() {
-    const tasks = await Promise.allSettled([
+    const t = await Promise.allSettled([
       this._fetchJSON("https://api.coingecko.com/api/v3/global"),
       this._fetchJSON(
         "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&price_change_percentage=24h",
@@ -1860,16 +1616,13 @@ class MarketStateWidget {
         "https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1",
       ),
     ]);
-
-    const g = tasks[0].status === "fulfilled" ? tasks[0].value : {};
-    const c = tasks[1].status === "fulfilled" ? tasks[1].value : [];
-    const p = tasks[2].status === "fulfilled" ? tasks[2].value : {};
-    const oh = tasks[3].status === "fulfilled" ? tasks[3].value : [];
-    const ls = tasks[4].status === "fulfilled" ? tasks[4].value : [];
-
+    const g = t[0].status === "fulfilled" ? t[0].value : {};
+    const c = t[1].status === "fulfilled" ? t[1].value : [];
+    const p = t[2].status === "fulfilled" ? t[2].value : {};
+    const oh = t[3].status === "fulfilled" ? t[3].value : [];
+    const ls = t[4].status === "fulfilled" ? t[4].value : [];
     const btc = Array.isArray(c) ? c.find((x) => x.symbol === "btc") : null;
     const d = g?.data || {};
-
     return {
       totalMcap: d.total_market_cap?.usd || 0,
       totalVolume: d.total_volume?.usd || 0,
@@ -1882,7 +1635,6 @@ class MarketStateWidget {
       topCoins: Array.isArray(c) ? c : [],
     };
   }
-
   _normVolume(v) {
     return this._map(this._log10(v / 1e9), this._log10(30), this._log10(300));
   }
@@ -1892,18 +1644,18 @@ class MarketStateWidget {
   _normVolatility(ch) {
     return this._clamp(100 - Math.abs(ch) * 8, 0, 100);
   }
-  _normFunding(rate) {
-    const r = rate * 100;
-    const absR = Math.abs(r);
-    const sign = r >= 0 ? 1 : -1;
-    const extremity = this._clamp((absR / 0.1) * 50, 0, 50);
-    return this._clamp(50 + sign * (50 - extremity), 0, 100);
+  _normFunding(r) {
+    const x = r * 100,
+      ax = Math.abs(x),
+      s = x >= 0 ? 1 : -1;
+    const e = this._clamp((ax / 0.1) * 50, 0, 50);
+    return this._clamp(50 + s * (50 - e), 0, 100);
   }
-  _normOI(hist) {
-    if (!hist || hist.length < 2) return 50;
-    const first = parseFloat(hist[0].sumOpenInterest) || 1;
-    const last = parseFloat(hist[hist.length - 1].sumOpenInterest) || first;
-    const ch = ((last - first) / first) * 100;
+  _normOI(h) {
+    if (!h || h.length < 2) return 50;
+    const f = parseFloat(h[0].sumOpenInterest) || 1;
+    const l = parseFloat(h[h.length - 1].sumOpenInterest) || f;
+    const ch = ((l - f) / f) * 100;
     if (ch >= 20) return 30;
     if (ch >= 10) return 60;
     if (ch >= 0) return 70;
@@ -1928,19 +1680,18 @@ class MarketStateWidget {
   _normAltseason(btcCh, coins) {
     if (!coins || coins.length < 10) return 50;
     const top50 = coins.slice(0, 50);
-    const beating = top50.filter(
+    const b = top50.filter(
       (x) => (x.price_change_percentage_24h || 0) > btcCh,
     ).length;
-    return this._clamp((beating / top50.length) * 100, 0, 100);
+    return this._clamp((b / top50.length) * 100, 0, 100);
   }
   _normGainers(coins) {
     if (!coins || !coins.length) return 50;
-    const up = coins.filter(
+    const u = coins.filter(
       (x) => (x.price_change_percentage_24h || 0) > 0,
     ).length;
-    return this._clamp((up / coins.length) * 100, 0, 100);
+    return this._clamp((u / coins.length) * 100, 0, 100);
   }
-
   _computeScores(m) {
     const w = this.cfg.weights;
     const liquidity = Math.round(
@@ -1965,27 +1716,25 @@ class MarketStateWidget {
     );
     return { liquidity, leverage, breadth, macro };
   }
-
   _getCache() {
     try {
-      const raw = localStorage.getItem(this.cfg.cacheKey);
-      if (!raw) return null;
-      const obj = JSON.parse(raw);
-      if (Date.now() - obj.ts > this.cfg.cacheTTL) return null;
-      return obj.data;
+      const r = localStorage.getItem(this.cfg.cacheKey);
+      if (!r) return null;
+      const o = JSON.parse(r);
+      if (Date.now() - o.ts > this.cfg.cacheTTL) return null;
+      return o.data;
     } catch {
       return null;
     }
   }
-  _setCache(data) {
+  _setCache(d) {
     try {
       localStorage.setItem(
         this.cfg.cacheKey,
-        JSON.stringify({ ts: Date.now(), data }),
+        JSON.stringify({ ts: Date.now(), data: d }),
       );
     } catch {}
   }
-
   async _refresh() {
     if (this._loading) return;
     this._loading = true;
@@ -1999,14 +1748,12 @@ class MarketStateWidget {
       this._render(data);
       this._setStatus("ok");
     } catch (e) {
-      console.warn("MarketStateWidget: ошибка", e);
       this._setStatus("error");
       if (!this._lastData) this._renderFallback();
     } finally {
       this._loading = false;
     }
   }
-
   _scaleInfo(v) {
     const x = utils.clamp(Math.round(v), 0, 100);
     for (const s of MACRO_SCALE) if (x >= s.min && x <= s.max) return s;
@@ -2018,23 +1765,18 @@ class MarketStateWidget {
   _scoreColor(v) {
     return this._scaleInfo(v).color;
   }
-
   _buildDocsHtml() {
     return `
       <h3>СОСТОЯНИЕ РЫНКА</h3>
       <p>Виджет агрегирует 3 композитных индекса (Ликвидность, Плечо, Широта) в 1 итоговый Macro Score. Каждый индекс и Macro находятся в диапазоне 0–100.</p>
-      <h4>Как читать баллы (общая шкала)</h4>
+      <h4>Как читать баллы</h4>
       <ul>
-        <li>75–100 🟢 Очень здоровый — Рынок сильный, тренд устойчив, можно торговать</li>
-        <li>55–74 🟡 Здоровый/нейтральный — Смешанные сигналы, торгуйте осторожно</li>
-        <li>40–54 🟠 Осторожно — Риски растут, снижайте плечо</li>
-        <li>20–39 🔴 Риск — Перегрев/паника, лучше в стороне</li>
-        <li>0–19 🔴 Экстрим — Кризис, экстремальные условия</li>
+        <li>75–100 🟢 Очень здоровый</li><li>55–74 🟡 Здоровый</li>
+        <li>40–54 🟠 Осторожно</li><li>20–39 🔴 Риск</li><li>0–19 🔴 Экстрим</li>
       </ul>
-      <p><strong>Важно:</strong> это не сигнал покупать/продавать. Это контекст — фильтр.</p>
-      <p><h4>1. Ликвидность</h4> — «толщина» рынка.</p>
-      <p><h4>2. Плечо</h4> — объём кредитных сделок.</p>
-      <p><h4>3. Широта</h4> — количество активов, торгуемых на рынке.</p>
+      <h4>1. Ликвидность</h4><p>«Толщина» рынка.</p>
+      <h4>2. Плечо</h4><p>Объём кредитных сделок.</p>
+      <h4>3. Широта</h4><p>Количество активов.</p>
       <h4>ПОКАЗАТЕЛИ</h4>
       <p><strong>Funding BTC</strong> — ставка финансирования.</p>
       <p><strong>Long/Short</strong> — соотношение счетов.</p>
@@ -2042,13 +1784,11 @@ class MarketStateWidget {
       <p><strong>MCap 24h</strong> — изменение капитализации.</p>
       <p><strong>Объём 24h</strong> — объём торгов за сутки.</p>
       <p><strong>Капитализация</strong> — общая капитализация.</p>
-      <h4>Macro = Ликвидность × 0.4 + Плечо × 0.3 + Широта × 0.3</h4>
-    `;
+      <h4>Macro = Ликвидность × 0.4 + Плечо × 0.3 + Широта × 0.3</h4>`;
   }
-
   _renderSkeleton() {
     this._container.innerHTML = `
-      <div class="ms-compact" title="Состояние рынка — Macro Heatmap">
+      <div class="ms-compact" title="Состояние рынка">
         <span class="ms-compact-dot ms-loading"></span>
         <span class="ms-compact-label">СОСТОЯНИЕ РЫНКА</span>
         <span class="ms-compact-value" style="color:#94a3b8;">--</span>
@@ -2071,8 +1811,7 @@ class MarketStateWidget {
                 <span class="ms-row-label">${l}</span>
                 <div class="ms-bar-track"><div class="ms-bar-fill ms-blue"></div></div>
                 <span class="ms-bar-value">--</span>
-              </div>
-            `,
+              </div>`,
               )
               .join("")}
           </div>
@@ -2084,24 +1823,19 @@ class MarketStateWidget {
           </div>
           <div class="ms-docs-content"></div>
         </div>
-      </div>
-    `;
+      </div>`;
     this._bindEvents();
   }
-
   _render(data) {
     const s = data.scores;
-    const macroInfo = this._scaleInfo(s.macro);
-
+    const mInfo = this._scaleInfo(s.macro);
     const compactHtml = `
-      <div class="ms-compact" title="Состояние рынка — Macro Heatmap">
+      <div class="ms-compact" title="Состояние рынка">
         <span class="ms-compact-dot" id="ms-status-dot"></span>
         <span class="ms-compact-label">СОСТОЯНИЕ РЫНКА</span>
-        <span class="ms-compact-value" style="color:${macroInfo.color};">${s.macro}</span>
+        <span class="ms-compact-value" style="color:${mInfo.color};">${s.macro}</span>
         <span class="ms-compact-arrow">▶</span>
-      </div>
-    `;
-
+      </div>`;
     const rows = [
       { label: "Ликвидность", val: s.liquidity },
       { label: "Плечо", val: s.leverage },
@@ -2116,36 +1850,33 @@ class MarketStateWidget {
           <div class="ms-bar-fill ${this._scoreClass(r.val)}" style="width:${r.val}%"></div>
         </div>
         <span class="ms-bar-value" style="color:${this._scoreColor(r.val)};">${r.val}</span>
-      </div>
-    `,
+      </div>`,
       )
       .join("");
-
-    const fundingPct = (data.fundingRate * 100).toFixed(4);
-    const fundingCls =
+    const fundPct = (data.fundingRate * 100).toFixed(4);
+    const fundCls =
       data.fundingRate > 0.0005 || data.fundingRate < -0.0005 ? "neg" : "pos";
-    const lsRatioStr = data.lsRatio.toFixed(2);
+    const lsStr = data.lsRatio.toFixed(2);
     const lsCls = data.lsRatio > 2.2 || data.lsRatio < 0.6 ? "neg" : "pos";
     const btcDom = data.btcDominance.toFixed(1);
-    const mcapChange = data.mcapChange24h.toFixed(2);
-    const mcapCls = data.mcapChange24h >= 0 ? "pos" : "neg";
-
+    const mc = data.mcapChange24h.toFixed(2);
+    const mcCls = data.mcapChange24h >= 0 ? "pos" : "neg";
     const panelHtml = `
       <div class="ms-dropdown-wrap">
         <div class="ms-panel">
           <div class="ms-panel-header">
             <div class="ms-panel-title">Состояние рынка</div>
             <div class="ms-panel-macro">
-              <span class="ms-panel-macro-value" style="color:${macroInfo.color};">${s.macro}</span>
-              <span class="ms-panel-macro-label">${macroInfo.label}</span>
+              <span class="ms-panel-macro-value" style="color:${mInfo.color};">${s.macro}</span>
+              <span class="ms-panel-macro-label">${mInfo.label}</span>
             </div>
           </div>
           <div class="ms-heatmap">${rowsHtml}</div>
           <div class="ms-details">
-            <div class="ms-detail"><span>Funding BTC</span><span class="ms-detail-val ${fundingCls}">${fundingPct}%</span></div>
-            <div class="ms-detail"><span>Long/Short</span><span class="ms-detail-val ${lsCls}">${lsRatioStr}</span></div>
+            <div class="ms-detail"><span>Funding BTC</span><span class="ms-detail-val ${fundCls}">${fundPct}%</span></div>
+            <div class="ms-detail"><span>Long/Short</span><span class="ms-detail-val ${lsCls}">${lsStr}</span></div>
             <div class="ms-detail"><span>BTC Dom</span><span class="ms-detail-val">${btcDom}%</span></div>
-            <div class="ms-detail"><span>MCap 24h</span><span class="ms-detail-val ${mcapCls}">${mcapChange}%</span></div>
+            <div class="ms-detail"><span>MCap 24h</span><span class="ms-detail-val ${mcCls}">${mc}%</span></div>
             <div class="ms-detail"><span>Объём 24h</span><span class="ms-detail-val">$${this._fmtNum(data.totalVolume)}</span></div>
             <div class="ms-detail"><span>Капитализация</span><span class="ms-detail-val">$${this._fmtNum(data.totalMcap)}</span></div>
           </div>
@@ -2165,22 +1896,15 @@ class MarketStateWidget {
           </div>
           <div class="ms-docs-content">${this._buildDocsHtml()}</div>
         </div>
-      </div>
-    `;
-
+      </div>`;
     this._container.innerHTML = compactHtml + panelHtml;
-
     if (this._isOpen) this._open();
     if (this._isDocsOpen) {
-      const docs = this._container.querySelector(".ms-docs-panel");
-      const arrow = this._container.querySelector(".ms-docs-arrow");
-      if (docs) docs.classList.add("ms-open");
-      if (arrow) arrow.classList.add("ms-open");
+      this._container.querySelector(".ms-docs-panel")?.classList.add("ms-open");
+      this._container.querySelector(".ms-docs-arrow")?.classList.add("ms-open");
     }
-
     this._bindEvents();
   }
-
   _renderFallback() {
     this._render({
       scores: { liquidity: 50, leverage: 50, breadth: 50, macro: 50 },
@@ -2194,67 +1918,62 @@ class MarketStateWidget {
     });
     this._setStatus("error");
   }
-
   _bindEvents() {
     const compact = this._container.querySelector(".ms-compact");
-    const refreshBtn = this._container.querySelector("#ms-refresh-btn");
-    const docsBtn = this._container.querySelector("#ms-docs-btn");
-    const docsClose = this._container.querySelector(".ms-docs-close");
-
+    const refresh = this._container.querySelector("#ms-refresh-btn");
+    const docs = this._container.querySelector("#ms-docs-btn");
+    const close = this._container.querySelector(".ms-docs-close");
     if (compact)
       compact.addEventListener("click", (e) => {
         e.stopPropagation();
         this._toggle();
       });
-    if (refreshBtn)
-      refreshBtn.addEventListener("click", (e) => {
+    if (refresh)
+      refresh.addEventListener("click", (e) => {
         e.stopPropagation();
         this.refreshNow();
       });
-    if (docsBtn)
-      docsBtn.addEventListener("click", (e) => {
+    if (docs)
+      docs.addEventListener("click", (e) => {
         e.stopPropagation();
         this._toggleDocs();
       });
-    if (docsClose)
-      docsClose.addEventListener("click", (e) => {
+    if (close)
+      close.addEventListener("click", (e) => {
         e.stopPropagation();
         this._isDocsOpen = false;
-        const docs = this._container.querySelector(".ms-docs-panel");
-        const arrow = this._container.querySelector(".ms-docs-arrow");
-        if (docs) docs.classList.remove("ms-open");
-        if (arrow) arrow.classList.remove("ms-open");
+        this._container
+          .querySelector(".ms-docs-panel")
+          ?.classList.remove("ms-open");
+        this._container
+          .querySelector(".ms-docs-arrow")
+          ?.classList.remove("ms-open");
       });
   }
-
   _setStatus(status) {
     const dot = this._container?.querySelector("#ms-status-dot");
     const time = this._container?.querySelector("#ms-update-time");
-    const compactDot = this._container?.querySelector(".ms-compact-dot");
-
+    const cd = this._container?.querySelector(".ms-compact-dot");
     if (dot) {
       dot.className = "ms-dot";
       if (status === "loading") dot.classList.add("ms-loading");
       else if (status === "error") dot.classList.add("ms-error");
     }
-    if (compactDot) {
-      compactDot.className = "ms-compact-dot";
-      if (status === "loading") compactDot.classList.add("ms-loading");
-      else if (status === "error") compactDot.classList.add("ms-error");
+    if (cd) {
+      cd.className = "ms-compact-dot";
+      if (status === "loading") cd.classList.add("ms-loading");
+      else if (status === "error") cd.classList.add("ms-error");
     }
     if (time && status === "ok") time.textContent = this._fmtTime(Date.now());
   }
 }
 
-// ============================================================
-//  TF GUIDE PANEL
-// ============================================================
+// ---------- TFGuidePanel ----------
 class TFGuidePanel {
   constructor() {
     this._isOpen = false;
     this._el = { trigger: null, wrap: null, body: null, closeBtn: null };
     this._currentTF = CONFIG.defaultTF;
-
     this._onDocClick = (e) => {
       if (!this._isOpen) return;
       const t = e.target;
@@ -2270,20 +1989,13 @@ class TFGuidePanel {
       if (e.key === "Escape" && this._isOpen) this.close();
     };
   }
-
   init() {
     this._el.trigger = document.querySelector(".tf-arrow");
     this._el.wrap = document.getElementById("tf-guide-panel");
     this._el.body = document.getElementById("tf-guide-body");
     this._el.closeBtn = document.querySelector(".tf-guide-panel-close");
-
-    if (!this._el.trigger || !this._el.wrap || !this._el.body) {
-      console.warn("⚠️ TFGuidePanel: элементы не найдены в DOM");
-      return;
-    }
-
+    if (!this._el.trigger || !this._el.wrap || !this._el.body) return;
     this._renderCard(this._currentTF);
-
     this._el.trigger.addEventListener("click", (e) => {
       e.stopPropagation();
       this.toggle();
@@ -2293,16 +2005,13 @@ class TFGuidePanel {
         e.stopPropagation();
         this.close();
       });
-
     document.addEventListener("click", this._onDocClick);
     document.addEventListener("keydown", this._onKeyDown);
   }
-
   destroy() {
     document.removeEventListener("click", this._onDocClick);
     document.removeEventListener("keydown", this._onKeyDown);
   }
-
   setTF(tf) {
     this._currentTF = tf;
     this._renderCard(tf);
@@ -2320,11 +2029,9 @@ class TFGuidePanel {
     this._el.wrap?.classList.remove("ms-open");
     this._el.trigger?.classList.remove("active");
   }
-
   _renderCard(tf) {
     const g = TF_GUIDES[tf];
     if (!g || !this._el.body) return;
-
     this._el.body.innerHTML = `
       <div class="doc-card doc-card-extended" data-tf="${tf}">
         <div class="tf-name">${g.icon} ${g.name}</div>
@@ -2333,8 +2040,8 @@ class TFGuidePanel {
         ${g.entryDescription ? `<div class="doc-section doc-section-entry">${g.entryDescription}</div>` : ""}
         ${g.waitDescription ? `<div class="doc-section doc-section-wait">${g.waitDescription}</div>` : ""}
         <div class="doc-section doc-section-actions">
-          <div style="margin:4px 0; font-size:11px;"><span class="action-buy"><span style="color:#00ff00;">▲</span> BUY:</span> ${g.action.BUY}</div>
-          <div style="margin:4px 0; font-size:11px;"><span class="action-sell"><span style="color:red;">▼</span> SELL:</span> ${g.action.SELL}</div>
+          <div style="margin:4px 0; font-size:11px;"><span class="action-buy">▲ BUY:</span> ${g.action.BUY}</div>
+          <div style="margin:4px 0; font-size:11px;"><span class="action-sell">▼ SELL:</span> ${g.action.SELL}</div>
           <div style="margin:4px 0; font-size:11px;"><span class="action-wait">⏸️ WAIT:</span> ${g.action.WAIT}</div>
         </div>
         <div class="doc-section doc-section-params">
@@ -2346,12 +2053,11 @@ class TFGuidePanel {
           ${g.holdTime ? `<div><span class="risk-label">Удержание:</span> <span class="risk-value">${g.holdTime}</span></div>` : ""}
         </div>
         ${g.proTip ? `<div class="doc-section doc-section-tip">💡 <b>Совет профи:</b> ${g.proTip}</div>` : ""}
-      </div>
-    `;
+      </div>`;
   }
 }
 
-// ---------- Рендерер UI ----------
+// ---------- UIRenderer ----------
 class UIRenderer {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
@@ -2371,170 +2077,147 @@ class UIRenderer {
     this._lastSignalKey = {};
     this.tfGuide = new TFGuidePanel();
   }
-
   setSoundManager(sm) {
     this.soundManager = sm;
   }
-
   render() {
-    const html = this._buildHTML();
-    this.container.innerHTML = html;
+    this.container.innerHTML = this._buildHTML();
     this._cacheElements();
     this._bindEvents();
     this.tfGuide.init();
     return this;
   }
-
   _buildHTML() {
-    const assetCards = CONFIG.assets
+    const cards = CONFIG.assets
       .map(
-        (asset) => `
-      <div class="signal-card neutral" data-asset="${asset}">
-          <div class="signal-strength-badge"></div>
-          <div class="card-header">
-              <span class="asset-name">${this._displayName(asset)}</span>
-              <span class="asset-price">--</span>
-          </div>
-          <div class="card-body">
-              <span class="signal-direction">⏳ Ожидание</span>
-              <span class="signal-confidence">--%</span>
-          </div>
-          <div class="indicators-grid">
-              ${["rsi", "macd", "ema", "cvd", "bb", "volume", "poc"]
-                .map(
-                  (ind) => `
-                  <div class="indicator-item" data-indicator="${ind}">
-                      <span class="ind-label">${this._indLabel(ind)}</span>
-                      <div class="indicator-bar-wrap">
-                          <div class="indicator-bar-fill neutral" style="width:0%"></div>
-                      </div>
-                      <span class="ind-value neutral">--</span>
-                  </div>
-              `,
-                )
-                .join("")}
-          </div>
-          <div class="action-indicators">
-              <div class="action-indicator wait" data-action="wait">
-                  <span class="label">⏸️ Ждать</span>
-                  <span class="value">0%</span>
-                  <div class="bar-bg"><div class="bar-fill" style="width:0%"></div></div>
+        (a) => `
+      <div class="signal-card neutral" data-asset="${a}">
+        <div class="signal-strength-badge"></div>
+        <div class="card-header">
+          <span class="asset-name">${a}</span>
+          <span class="asset-price">--</span>
+        </div>
+        <div class="card-body">
+          <span class="signal-direction">⏳ Ожидание</span>
+          <span class="signal-confidence">--%</span>
+        </div>
+        <div class="indicators-grid">
+          ${["rsi", "macd", "ema", "cvd", "bb", "volume", "poc"]
+            .map(
+              (ind) => `
+            <div class="indicator-item" data-indicator="${ind}">
+              <span class="ind-label">${this._indLabel(ind)}</span>
+              <div class="indicator-bar-wrap">
+                <div class="indicator-bar-fill neutral" style="width:0%"></div>
               </div>
-              <div class="action-indicator buy" data-action="buy">
-                  <span class="label"><span style="color:#00ff00;">▲</span> Купить</span>
-                  <span class="value">0%</span>
-                  <div class="bar-bg"><div class="bar-fill" style="width:0%"></div></div>
-              </div>
-              <div class="action-indicator sell" data-action="sell">
-                  <span class="label">🔻 Продать</span>
-                  <span class="value">0%</span>
-                  <div class="bar-bg"><div class="bar-fill" style="width:0%"></div></div>
-              </div>
+              <span class="ind-value neutral">--</span>
+            </div>`,
+            )
+            .join("")}
+        </div>
+        <div class="action-indicators">
+          <div class="action-indicator wait" data-action="wait">
+            <span class="label">⏸️ Ждать</span>
+            <span class="value">0%</span>
+            <div class="bar-bg"><div class="bar-fill" style="width:0%"></div></div>
           </div>
-          <div class="card-footer">
-              <span class="tf-signal">--</span>
+          <div class="action-indicator buy" data-action="buy">
+            <span class="label">▲ Купить</span>
+            <span class="value">0%</span>
+            <div class="bar-bg"><div class="bar-fill" style="width:0%"></div></div>
           </div>
-      </div>
-    `,
+          <div class="action-indicator sell" data-action="sell">
+            <span class="label">🔻 Продать</span>
+            <span class="value">0%</span>
+            <div class="bar-bg"><div class="bar-fill" style="width:0%"></div></div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="tf-signal">--</span>
+        </div>
+      </div>`,
       )
       .join("");
 
     return `
       <div class="crypto-signal-widget">
-          <div class="widget-header">
-              <div>
-                  <span class="widget-title">⚛ CRYPTO SIGNAL TOOL ⚛</span>
-                  <span class="widget-version"><b>v10.3</b> • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж</span>
-              </div>
-              <div class="widget-status-group">
-                  <div class="sound-controls">
-                      <button class="sound-toggle active" id="sound-toggle">
-                          🔊 <span class="sound-label">Вкл</span>
-                      </button>
-                      <span class="sound-status" id="sound-status">
-                          <span class="sound-indicator on"></span>
-                      </span>
-                      <span class="sound-info">Звук при ≥75%</span>
-                  </div>
-                  <div class="ws-status-group">
-                    <span class="ws-status" id="ws-status">⚡ Подключение...</span>
-                    <span class="last-update" id="last-update">--:--:--</span>
-                  </div>
-              </div>
+        <div class="widget-header">
+          <div>
+            <span class="widget-title">⚛ CRYPTO SIGNAL TOOL ⚛</span>
+            <span class="widget-version"><b>v10.3</b> • 7 индикаторов • 7 бирж</span>
           </div>
-
-          <div class="tf-group" id="tf-group">
-              <div class="tf-arrow-wrap">
-                  <button class="tf-arrow" type="button" data-tf="◂">◂</button>
-                  <div class="tf-guide-panel" id="tf-guide-panel">
-                      <div class="tf-guide-panel-header">
-                          <span>ГАЙД ТАЙМФРЕЙМА</span>
-                          <button class="tf-guide-panel-close" type="button" title="Закрыть">✕</button>
-                      </div>
-                      <div class="tf-guide-panel-body" id="tf-guide-body"></div>
-                  </div>
-              </div>
-              ${CONFIG.timeframes.map((tf) => `<button class="tf-btn ${tf === CONFIG.defaultTF ? "active" : ""}" data-tf="${tf}">${tf}</button>`).join("")}
-              <div class="signal-count-item">⚡ <span id="signal-count">0</span> сигналов</div>
-
-              <div class="fng-widget" id="fngWidget" title="Crypto Fear & Greed Index">
-                  <span class="fng-label">СТРАХ & ЖАДНОСТЬ</span>
-                  <div class="fng-track">
-                      <div class="fng-marker" id="fngMarker"></div>
-                  </div>
-                  <span class="fng-value" id="fngValue">50 Neutral</span>
-              </div>
-
-              <div class="ms-inline-slot">
-                  <div id="market-state-widget"></div>
-              </div>
+          <div class="widget-status-group">
+            <div class="sound-controls">
+              <button class="sound-toggle active" id="sound-toggle">🔊<span class="sound-label">Вкл</span></button>
+              <span class="sound-status" id="sound-status"><span class="sound-indicator on"></span></span>
+              <span class="sound-info">≥75%</span>
+            </div>
+            <div class="ws-status-group">
+              <span class="ws-status" id="ws-status">⚡ Подключение...</span>
+              <span class="last-update" id="last-update">--:--:--</span>
+            </div>
           </div>
+        </div>
 
-          <div class="signal-grid" id="signal-grid">
-              ${assetCards}
-          </div>
-
-          <div class="trade-history-section">
-              <div class="trade-history-header">
-                  <div class="trade-history-title">ИСТОРИЯ ТОРГОВЛИ (backtesting) стратегии на исторических данных. Виджет симулирует торговлю, используя те же самые 7 индикаторов, и показывает, как бы вы заработали или потеряли деньги, если бы следовали сигналам в прошлом.</div>
-                  <div class="trade-history-stats" id="trade-stats">
-                      <div class="stat-item">Всего: <span class="stat-value total" id="stat-total">0</span></div>
-                      <div class="stat-item">Win: <span class="stat-value win" id="stat-wins">0</span></div>
-                      <div class="stat-item">Loss: <span class="stat-value loss" id="stat-losses">0</span></div>
-                      <div class="stat-item">Win Rate: <span class="stat-value" id="stat-winrate" style="color:#fbbf24;">0%</span></div>
-                      <div class="stat-item">P/L: <span class="stat-value" id="stat-pl" style="color:#94a3b8;">$0</span></div>
-                  </div>
+        <div class="tf-group" id="tf-group">
+          <div class="tf-arrow-wrap">
+            <button class="tf-arrow" type="button" data-tf="◂">◂</button>
+            <div class="tf-guide-panel" id="tf-guide-panel">
+              <div class="tf-guide-panel-header">
+                <span>ГАЙД ТАЙМФРЕЙМА</span>
+                <button class="tf-guide-panel-close" type="button">✕</button>
               </div>
-              <div class="trade-history-grid" id="trade-history-grid">
-                  <div style="grid-column:1/-1; text-align:center; color:#475569; font-size:12px; padding:20px;">⏳ Загрузка исторических данных...</div>
-              </div>
+              <div class="tf-guide-panel-body" id="tf-guide-body"></div>
+            </div>
           </div>
+          ${CONFIG.timeframes.map((tf) => `<button class="tf-btn ${tf === CONFIG.defaultTF ? "active" : ""}" data-tf="${tf}">${tf}</button>`).join("")}
+          <div class="signal-count-item">⚡ <span id="signal-count">0</span> сигналов</div>
+          <div class="fng-widget" id="fngWidget">
+            <span class="fng-label">СТРАХ & ЖАДНОСТЬ</span>
+            <div class="fng-track"><div class="fng-marker" id="fngMarker"></div></div>
+            <span class="fng-value" id="fngValue">50 Neutral</span>
+          </div>
+          <div class="ms-inline-slot"><div id="market-state-widget"></div></div>
+        </div>
 
-          <div class="widget-footer">
-              <div class="footer-stat">🎯 >75% Сильный</div>
-              <div class="footer-stat">💾 <span id="cache-status">Кэш</span></div>
-              <div class="footer-stat"><span id="connection-info">WebSocket</span></div>
-              <div class="footer-stat"><span id="history-status">История</span></div>
-              <div class="footer-stat">⚡<span id="asset-count">${CONFIG.assets.length} активов</span></div>
-          </div>
+        <div class="signal-grid" id="signal-grid">${cards}</div>
 
-          <div class="docs-wrapper">
-              <details>
-                  <summary>ДОКУМЕНТАЦИЯ</summary>
-                  <div class="docs-content">
-                      ${this._buildDocs()}
-                  </div>
-              </details>
+        <div class="trade-history-section">
+          <div class="trade-history-header">
+            <div class="trade-history-title">ИСТОРИЯ ТОРГОВЛИ (backtesting)</div>
+            <div class="trade-history-stats" id="trade-stats">
+              <div class="stat-item">Всего: <span class="stat-value total" id="stat-total">0</span></div>
+              <div class="stat-item">Win: <span class="stat-value win" id="stat-wins">0</span></div>
+              <div class="stat-item">Loss: <span class="stat-value loss" id="stat-losses">0</span></div>
+              <div class="stat-item">Win Rate: <span class="stat-value" id="stat-winrate" style="color:#fbbf24;">0%</span></div>
+              <div class="stat-item">P/L: <span class="stat-value" id="stat-pl" style="color:#94a3b8;">$0</span></div>
+            </div>
           </div>
-      </div>
-    `;
+          <div class="trade-history-grid" id="trade-history-grid">
+            <div style="grid-column:1/-1; text-align:center; color:#475569; font-size:12px; padding:20px;">⏳ Загрузка...</div>
+          </div>
+        </div>
+
+        <div class="widget-footer">
+          <div class="footer-stat">🎯 >75% Сильный</div>
+          <div class="footer-stat">💾 <span id="cache-status">Кэш</span></div>
+          <div class="footer-stat"><span id="connection-info">WebSocket</span></div>
+          <div class="footer-stat"><span id="history-status">История</span></div>
+          <div class="footer-stat">⚡<span id="asset-count">${CONFIG.assets.length} активов</span></div>
+        </div>
+
+        <div class="docs-wrapper">
+          <details>
+            <summary>ДОКУМЕНТАЦИЯ</summary>
+            <div class="docs-content">${this._buildDocs()}</div>
+          </details>
+        </div>
+      </div>`;
   }
-
   _buildDocs() {
     const w = CONFIG.scoring.weights;
-    const totalW = Object.values(w).reduce((s, v) => s + v, 0) || 1;
-    const pct = (k) => Math.round((w[k] / totalW) * 100);
-
+    const tw = Object.values(w).reduce((s, v) => s + v, 0) || 1;
+    const pct = (k) => Math.round((w[k] / tw) * 100);
     const cards = CONFIG.timeframes
       .map((tf) => {
         const g = TF_GUIDES[tf];
@@ -2547,7 +2230,7 @@ class UIRenderer {
           ${g.entryDescription ? `<div class="doc-section doc-section-entry">${g.entryDescription}</div>` : ""}
           ${g.waitDescription ? `<div class="doc-section doc-section-wait">${g.waitDescription}</div>` : ""}
           <div class="doc-section doc-section-actions">
-            <div style="margin:4px 0; font-size:11px;"><span class="action-buy"><span style="color:#00ff00;">▲</span> BUY:</span> ${g.action.BUY}</div>
+            <div style="margin:4px 0; font-size:11px;"><span class="action-buy">▲ BUY:</span> ${g.action.BUY}</div>
             <div style="margin:4px 0; font-size:11px;"><span class="action-sell">🔻 SELL:</span> ${g.action.SELL}</div>
             <div style="margin:4px 0; font-size:11px;"><span class="action-wait">⏸️ WAIT:</span> ${g.action.WAIT}</div>
           </div>
@@ -2560,80 +2243,55 @@ class UIRenderer {
             ${g.holdTime ? `<div><span class="risk-label">Удержание:</span> <span class="risk-value">${g.holdTime}</span></div>` : ""}
           </div>
           ${g.proTip ? `<div class="doc-section doc-section-tip">💡 <b>Совет профи:</b> ${g.proTip}</div>` : ""}
-        </div>
-      `;
+        </div>`;
       })
       .join("");
 
     return `
       <div class="doc-grid">${cards}</div>
       <div class="doc-legend">
-          <span class="legend-item"><span class="legend-dot buy-dot"></span> BUY</span>
-          <span class="legend-item"><span class="legend-dot sell-dot"></span> SELL</span>
-          <span class="legend-item"><span class="legend-dot wait-dot"></span> WAIT</span>
-          <span class="legend-item"><span class="legend-dot strong-dot"></span> Strong (>75%)</span>
-          <span class="legend-item" style="color:#fbbf24;">🔊 Звук при ≥75%</span>
-          <span class="legend-item">⚠️ Риск-менеджмент обязателен! ⚠️</span>
+        <span class="legend-item"><span class="legend-dot buy-dot"></span> BUY</span>
+        <span class="legend-item"><span class="legend-dot sell-dot"></span> SELL</span>
+        <span class="legend-item"><span class="legend-dot wait-dot"></span> WAIT</span>
+        <span class="legend-item"><span class="legend-dot strong-dot"></span> Strong (>75%)</span>
+        <span class="legend-item" style="color:#fbbf24;">🔊 Звук при ≥75%</span>
       </div>
-      <div style="margin-top:8px; padding:8px 12px; background:rgba(255,255,255,0.03); border-radius:8px; font-size:11px; color:#94a3b8;">
-          <strong style="color:#e2e8f0;">📌 Общие правила:</strong><br>
-          • Используйте 4H как основной таймфрейм для входа<br>
-          • 1H и 2H — для уточнения точек входа<br>
-          • 15m — только для скальпинга (опытные трейдеры)<br>
-          • 1D — для долгосрочных инвестиций<br>
-          • Всегда используйте стоп-лосс!<br>
-          • Не рискуйте более 2-3% депозита на одну сделку<br>
-          • Диверсифицируйте активы (не более 30% в один актив)
+      <div style="margin-top:8px;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;font-size:11px;color:#94a3b8;">
+        <strong style="color:#e2e8f0;">📌 Общие правила:</strong><br>
+        • 4H — основной TF для входа<br>
+        • 1H и 2H — для уточнения<br>
+        • 15m — скальпинг (опытные)<br>
+        • 1D — долгосрочные инвестиции<br>
+        • Всегда стоп-лосс!<br>
+        • Риск ≤ 2-3% депозита на сделку
       </div>
       <br>
-      <span>Данное приложение — это мощный инструмент для принятия торговых решений, но не гарантия прибыли.</span>
-      <br><br>
-      <span>РАСШИФРОВКА 7 ИНДИКАТОРОВ (веса настраиваются в CONFIG.scoring.weights, итог автонормируется к 100%)<br>
-        1. RSI — вес ${w.rsi} → ${pct("rsi")}%<br>
-        2. MACD — вес ${w.macd} → ${pct("macd")}%<br>
-        3. EMA Ribbon — вес ${w.ema} → ${pct("ema")}%<br>
-        4. CVD — вес ${w.cvd} → ${pct("cvd")}%<br>
-        5. Bollinger Bands — вес ${w.bb} → ${pct("bb")}%<br>
-        6. Volume Spike — вес ${w.volume} → ${pct("volume")}%<br>
-        7. POC — вес ${w.poc} → ${pct("poc")}%<br>
-        <em style="color:#64748b;">Сумма сырых весов: ${totalW} (нормируется автоматически).</em>
+      <span><b>РАСШИФРОВКА 7 ИНДИКАТОРОВ</b> (веса нормируются к 100%)<br>
+        RSI — вес ${w.rsi} → ${pct("rsi")}%<br>
+        MACD — вес ${w.macd} → ${pct("macd")}%<br>
+        EMA Ribbon — вес ${w.ema} → ${pct("ema")}%<br>
+        CVD — вес ${w.cvd} → ${pct("cvd")}%<br>
+        Bollinger — вес ${w.bb} → ${pct("bb")}%<br>
+        Volume — вес ${w.volume} → ${pct("volume")}%<br>
+        POC — вес ${w.poc} → ${pct("poc")}%
       </span>
       <br>
-      <span><strong>МЕРЦАНИЕ</strong><br>60-64% Слабая • 65-69% Средняя • 70-74% Сильная • 75-79% Очень сильная • 80%+ Экстремальная</span>
-    `;
+      <span><b>ГРАДАЦИИ:</b> 60-64% Слабая • 65-69% Средняя • 70-74% Сильная • 75-79% Очень сильная • 80%+ Экстремальная</span>`;
   }
-
-  _displayName(asset) {
-    const map = {
-      BTC: "BTC",
-      ETH: "ETH",
-      BNB: "BNB",
-      SOL: "SOL",
-      XRP: "XRP",
-      ADA: "ADA",
-      GRAM: "GRAM",
-      TRX: "TRX",
-      PAXG: "PAXG",
-    };
-    return map[asset] || asset;
-  }
-
   _indLabel(ind) {
-    const map = {
+    const m = {
       rsi: "RSI",
       macd: "MACD",
-      ema: "EMA Ribbon",
+      ema: "EMA",
       cvd: "CVD",
-      bb: "Bollinger",
-      volume: "Volume",
+      bb: "BB",
+      volume: "VOL",
       poc: "POC",
     };
-    return map[ind] || ind;
+    return m[ind] || ind;
   }
-
   _cacheElements() {
     this.el = {
-      grid: document.getElementById("signal-grid"),
       status: document.getElementById("ws-status"),
       lastUpdate: document.getElementById("last-update"),
       signalCount: document.getElementById("signal-count"),
@@ -2641,7 +2299,6 @@ class UIRenderer {
       connectionInfo: document.getElementById("connection-info"),
       historyGrid: document.getElementById("trade-history-grid"),
       historyStatus: document.getElementById("history-status"),
-      assetCount: document.getElementById("asset-count"),
       soundToggle: document.getElementById("sound-toggle"),
       tfGroup: document.getElementById("tf-group"),
       statTotal: document.getElementById("stat-total"),
@@ -2651,19 +2308,17 @@ class UIRenderer {
       statPl: document.getElementById("stat-pl"),
     };
     this.cards = {};
-    document.querySelectorAll(".signal-card").forEach((card) => {
-      const asset = card.dataset.asset;
-      this.cards[asset] = card;
+    document.querySelectorAll(".signal-card").forEach((c) => {
+      this.cards[c.dataset.asset] = c;
     });
   }
-
   _bindEvents() {
     if (this.el.soundToggle) {
       this.el.soundToggle.addEventListener("click", () => {
         if (this.soundManager) {
-          const enabled = this.soundManager.toggle();
-          this.el.soundToggle.className = `sound-toggle ${enabled ? "active" : "muted"}`;
-          this.el.soundToggle.innerHTML = `${enabled ? "🔊" : "🔇"}<span class="sound-label">${enabled ? "Вкл" : "Выкл"}</span>`;
+          const en = this.soundManager.toggle();
+          this.el.soundToggle.className = `sound-toggle ${en ? "active" : "muted"}`;
+          this.el.soundToggle.innerHTML = `${en ? "🔊" : "🔇"}<span class="sound-label">${en ? "Вкл" : "Выкл"}</span>`;
         }
       });
     }
@@ -2681,57 +2336,54 @@ class UIRenderer {
       });
     }
   }
-
   updateSignal(asset, signal) {
     this.signals.set(asset, signal);
     const card = this.cards[asset];
     if (!card) return;
-
     const priceEl = card.querySelector(".asset-price");
     if (priceEl && signal.price)
       priceEl.textContent = `$${signal.price.toFixed(2)}`;
 
     const dirEl = card.querySelector(".signal-direction");
     const confEl = card.querySelector(".signal-confidence");
-    const displayDir = signal.scoreDirection || signal.direction;
+    const dispDir = signal.scoreDirection || signal.direction;
     if (dirEl) {
       let icon = "⏸️",
         color = "#94a3b8",
         bg = "rgba(255,255,255,0.05)";
-      if (displayDir === "BUY") {
+      if (dispDir === "BUY") {
         icon = "🟢";
         color = "#34d399";
         bg = "rgba(52,211,153,0.15)";
-      } else if (displayDir === "SELL") {
+      } else if (dispDir === "SELL") {
         icon = "🔻";
         color = "#f87171";
         bg = "rgba(248,113,113,0.15)";
       }
-      dirEl.textContent = `${icon} ${displayDir}`;
+      dirEl.textContent = `${icon} ${dispDir}`;
       dirEl.style.background = bg;
       dirEl.style.color = color;
     }
     if (confEl) {
-      const conf = signal.confidence || 0;
-      confEl.textContent = conf > 0 ? `${conf}%` : "--%";
+      const c = signal.confidence || 0;
+      confEl.textContent = c > 0 ? `${c}%` : "--%";
       confEl.style.color =
-        conf >= 75
+        c >= 75
           ? "#34d399"
-          : conf >= 60
+          : c >= 60
             ? "#fbbf24"
-            : conf >= 45
+            : c >= 45
               ? "#f59e0b"
               : "#475569";
     }
 
-    // ФИКС: передаём indicatorStates для нейтральных значений
     this._updateIndicators(
       card,
       signal.indicatorScores,
       signal.indicatorStates,
     );
     this._updateActions(card, signal.actionProbabilities);
-    this._updateBadgeAndGlow(card, displayDir, signal.confidence);
+    this._updateBadgeAndGlow(card, dispDir, signal.confidence);
 
     const tfEl = card.querySelector(".tf-signal");
     if (tfEl && signal.indicators)
@@ -2740,30 +2392,25 @@ class UIRenderer {
     if (
       this.soundManager &&
       signal.confidence >= CONFIG.sound.threshold &&
-      displayDir !== "NEUTRAL"
+      dispDir !== "NEUTRAL"
     ) {
-      const signalType = displayDir;
-      const currentKey = `${asset}-${signalType}-${signal.confidence}`;
-      const prevKey = this._lastSignalKey?.[asset];
-      if (prevKey !== currentKey) {
+      const key = `${asset}-${dispDir}-${signal.confidence}`;
+      if (this._lastSignalKey[asset] !== key) {
         this.soundManager.stopRepeating(asset);
-        this.soundManager.startRepeating(asset, signalType, signal.confidence);
-        this._lastSignalKey = this._lastSignalKey || {};
-        this._lastSignalKey[asset] = currentKey;
+        this.soundManager.startRepeating(asset, dispDir, signal.confidence);
+        this._lastSignalKey[asset] = key;
       }
     } else if (this.soundManager) {
       this.soundManager.stopRepeating(asset);
-      if (this._lastSignalKey) delete this._lastSignalKey[asset];
+      delete this._lastSignalKey[asset];
     }
   }
 
-  // ============================================================
-  //  ФИКС: нормализация по весу индикатора + нейтральные значения
-  // ============================================================
+  // === ГЛАВНЫЙ ФИКС: нормализация по весу + нейтральные значения ===
   _updateIndicators(card, scores, states) {
     if (!scores) return;
     const weights = CONFIG.scoring.weights;
-    const totalWeight = Object.values(weights).reduce((s, v) => s + v, 0) || 1;
+    const totalW = Object.values(weights).reduce((s, v) => s + v, 0) || 1;
     const items = card.querySelectorAll(".indicator-item");
     const keys = ["rsi", "macd", "ema", "cvd", "bb", "volume", "poc"];
 
@@ -2776,13 +2423,12 @@ class UIRenderer {
       const labelEl = item.querySelector(".ind-label");
       if (!valueEl || !barFill) return;
 
-      // Максимальный вклад данного индикатора в netScore = weight/totalWeight*100
-      const maxScore = (weights[key] / totalWeight) * 100;
+      const maxScore = (weights[key] / totalW) * 100;
       const normalizedPct =
         maxScore > 0 ? Math.min((Math.abs(score) / maxScore) * 100, 100) : 0;
 
       let cls = "neutral";
-      let display = "0";
+      let display;
 
       if (score > 0) {
         display = `+${Math.round(normalizedPct)}%`;
@@ -2791,38 +2437,35 @@ class UIRenderer {
         display = `-${Math.round(normalizedPct)}%`;
         cls = normalizedPct >= 75 ? "strong-bearish" : "bearish";
       } else if (state) {
-        // Нейтральное состояние — показываем реальное значение индикатора
+        // Нейтральное состояние — показываем реальное значение
         display = this._formatNeutralState(key, state);
         cls = "neutral";
       } else {
-        display = "0";
+        display = "--";
       }
 
       valueEl.textContent = display;
       valueEl.className = `ind-value ${cls}`;
 
-      // ФИКС: используем classList, не затираем сильные классы
-      barFill.classList.remove(
-        "neutral",
-        "bullish",
-        "bearish",
-        "strong-bullish",
-        "strong-bearish",
-      );
-      barFill.classList.add(cls);
+      // ВАЖНО: ваш CSS не имеет .strong-bullish/.strong-bearish для бара,
+      // поэтому для бара используем только bullish/bearish/neutral
+      const barCls = cls.includes("bullish")
+        ? "bullish"
+        : cls.includes("bearish")
+          ? "bearish"
+          : "neutral";
+      barFill.classList.remove("neutral", "bullish", "bearish");
+      barFill.classList.add(barCls);
       barFill.style.width = `${normalizedPct}%`;
 
-      // Tooltip с реальным значением
-      if (labelEl && state) {
-        labelEl.title = this._formatTooltip(key, state);
-      }
+      if (labelEl && state) labelEl.title = this._formatTooltip(key, state);
     });
   }
 
   _formatNeutralState(key, s) {
     switch (key) {
       case "rsi":
-        return `${s.value}`;
+        return String(s.value ?? "--");
       case "macd":
         return s.bias === "growing" ? "↗" : s.bias === "falling" ? "↘" : "→";
       case "ema":
@@ -2830,13 +2473,13 @@ class UIRenderer {
       case "cvd":
         return s.bias === "rising" ? "↗" : s.bias === "falling" ? "↘" : "→";
       case "bb":
-        return s.squeeze ? "≋" : s.width;
+        return s.squeeze ? "≋" : s.width || "--";
       case "volume":
-        return `${s.ratio}x`;
+        return `${s.ratio ?? "--"}x`;
       case "poc":
-        return s.near ? "◎" : s.distance;
+        return s.near ? "◎" : s.distance || "--";
       default:
-        return "0";
+        return "--";
     }
   }
 
@@ -2863,21 +2506,19 @@ class UIRenderer {
 
   _updateActions(card, probs) {
     if (!probs) return;
-    const actions = card.querySelectorAll(".action-indicator");
-    actions.forEach((el) => {
-      const action = el.dataset.action;
-      const valueEl = el.querySelector(".value");
-      const barFill = el.querySelector(".bar-fill");
-      if (!valueEl || !barFill) return;
-      const pct = probs[action] || 0;
-      valueEl.textContent = `${pct}%`;
-      barFill.style.width = `${pct}%`;
-      el.classList.toggle("active", pct > 30);
+    card.querySelectorAll(".action-indicator").forEach((el) => {
+      const a = el.dataset.action;
+      const v = el.querySelector(".value");
+      const b = el.querySelector(".bar-fill");
+      if (!v || !b) return;
+      const p = probs[a] || 0;
+      v.textContent = `${p}%`;
+      b.style.width = `${p}%`;
+      el.classList.toggle("active", p > 30);
     });
   }
 
-  // ФИКС: classList вместо манипуляций строкой className
-  _updateBadgeAndGlow(card, direction, confidence) {
+  _updateBadgeAndGlow(card, dir, conf) {
     const badge = card.querySelector(".signal-strength-badge");
     card.classList.remove(
       "buy-60",
@@ -2896,45 +2537,45 @@ class UIRenderer {
       badge.className = "signal-strength-badge";
       badge.textContent = "";
     }
-    if (direction === "NEUTRAL" || confidence < 60) {
+    if (dir === "NEUTRAL" || conf < 60) {
       card.classList.add("neutral");
       return;
     }
-    let signalClass = "",
-      badgeText = "",
-      badgeClass = "";
-    const isBuy = direction === "BUY";
-    if (confidence >= 80) {
-      signalClass = isBuy ? "buy-80" : "sell-80";
-      badgeText = isBuy ? "🔥 СИЛЬНЫЙ BUY" : "🔥 СИЛЬНЫЙ SELL";
-      badgeClass = isBuy ? "buy-strong" : "sell-strong";
-    } else if (confidence >= 75) {
-      signalClass = isBuy ? "buy-75" : "sell-75";
-      badgeText = isBuy ? "💪 BUY 75%+" : "💪 SELL 75%+";
-      badgeClass = isBuy ? "buy-strong" : "sell-strong";
-    } else if (confidence >= 70) {
-      signalClass = isBuy ? "buy-70" : "sell-70";
-      badgeText = isBuy ? "🟢 BUY 70%+" : "🔻 SELL 70%+";
-      badgeClass = isBuy ? "buy" : "sell";
-    } else if (confidence >= 65) {
-      signalClass = isBuy ? "buy-65" : "sell-65";
-      badgeText = isBuy ? "🟢 BUY 65%+" : "🔻 SELL 65%+";
-      badgeClass = isBuy ? "buy" : "sell";
+    const isBuy = dir === "BUY";
+    let sc = "",
+      bt = "",
+      bc = "";
+    if (conf >= 80) {
+      sc = isBuy ? "buy-80" : "sell-80";
+      bt = isBuy ? "🔥 BUY" : "🔥 SELL";
+      bc = isBuy ? "buy-strong" : "sell-strong";
+    } else if (conf >= 75) {
+      sc = isBuy ? "buy-75" : "sell-75";
+      bt = isBuy ? "💪 BUY 75+" : "💪 SELL 75+";
+      bc = isBuy ? "buy-strong" : "sell-strong";
+    } else if (conf >= 70) {
+      sc = isBuy ? "buy-70" : "sell-70";
+      bt = isBuy ? "🟢 BUY 70+" : "🔻 SELL 70+";
+      bc = isBuy ? "buy" : "sell";
+    } else if (conf >= 65) {
+      sc = isBuy ? "buy-65" : "sell-65";
+      bt = isBuy ? "🟢 BUY 65+" : "🔻 SELL 65+";
+      bc = isBuy ? "buy" : "sell";
     } else {
-      signalClass = isBuy ? "buy-60" : "sell-60";
-      badgeText = isBuy ? "🟢 BUY 60%+" : "🔻 SELL 60%+";
-      badgeClass = isBuy ? "buy" : "sell";
+      sc = isBuy ? "buy-60" : "sell-60";
+      bt = isBuy ? "🟢 BUY 60+" : "🔻 SELL 60+";
+      bc = isBuy ? "buy" : "sell";
     }
-    card.classList.add(signalClass);
+    card.classList.add(sc);
     if (badge) {
-      badge.textContent = badgeText;
-      badge.className = `signal-strength-badge visible ${badgeClass}`;
+      badge.textContent = bt;
+      badge.className = `signal-strength-badge visible ${bc}`;
     }
   }
 
-  updateTradeHistory(history, stats) {
-    this.tradeHistory = history || [];
-    this.stats = stats || {
+  updateTradeHistory(h, s) {
+    this.tradeHistory = h || [];
+    this.stats = s || {
       totalTrades: 0,
       wins: 0,
       losses: 0,
@@ -2944,104 +2585,90 @@ class UIRenderer {
     this._renderHistory();
     this._updateStatsUI();
   }
-
   _renderHistory() {
-    const grid = this.el.historyGrid;
-    if (!grid) return;
-    const trades = this.tradeHistory;
-    if (!trades.length) {
-      grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#475569; font-size:12px; padding:20px;">📭 Нет сделок</div>`;
+    const g = this.el.historyGrid;
+    if (!g) return;
+    const t = this.tradeHistory;
+    if (!t.length) {
+      g.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#475569;font-size:12px;padding:20px;">📭 Нет сделок</div>`;
       return;
     }
-    const display = trades.slice(0, 20);
-    grid.innerHTML = display
-      .map((t) => {
-        const isWin = t.profit > 0;
-        const profitStr =
-          (t.profit >= 0 ? "+" : "") + t.profit.toFixed(2) + "$";
-        const dirLabel = t.direction === "BUY" ? "🟢 BUY" : "🔻 SELL";
-        const badgeCls = t.direction === "BUY" ? "buy-badge" : "sell-badge";
-        const date = new Date(t.entryTime).toLocaleString("ru-RU", {
+    const d = t.slice(0, 20);
+    g.innerHTML = d
+      .map((x) => {
+        const w = x.profit > 0;
+        const p = (x.profit >= 0 ? "+" : "") + x.profit.toFixed(2) + "$";
+        const dir = x.direction === "BUY" ? "🟢 BUY" : "🔻 SELL";
+        const cls = x.direction === "BUY" ? "buy-badge" : "sell-badge";
+        const date = new Date(x.entryTime).toLocaleString("ru-RU", {
           day: "2-digit",
           month: "2-digit",
           hour: "2-digit",
           minute: "2-digit",
         });
-        const assetName = this._displayName(t.asset) || t.asset;
         return `
         <div class="trade-card">
           <div class="trade-info">
-            <div class="trade-asset">${assetName}</div>
-            <div class="trade-detail">
-              <span class="trade-direction-badge ${badgeCls}">${dirLabel}</span>
-              <span style="color:#475569; margin-left:6px;">conf: ${t.confidence}%</span>
-            </div>
-            <div class="trade-detail">Entry: $${t.entryPrice.toFixed(2)} → Exit: $${t.exitPrice.toFixed(2)}</div>
+            <div class="trade-asset">${x.asset}</div>
+            <div class="trade-detail"><span class="trade-direction-badge ${cls}">${dir}</span> conf: ${x.confidence}%</div>
+            <div class="trade-detail">$${x.entryPrice.toFixed(2)} → $${x.exitPrice.toFixed(2)}</div>
             <div class="trade-time">${date}</div>
           </div>
           <div class="trade-result">
-            <div class="trade-profit ${isWin ? "positive" : "negative"}">${profitStr}</div>
-            <div style="font-size:10px; color:#64748b;">${(t.profitPercent >= 0 ? "+" : "") + t.profitPercent.toFixed(2)}%</div>
-            <div style="font-size:8px; color:#475569; margin-top:2px;">${t.exitReason === "take_profit" ? "✅ TP" : t.exitReason === "stop_loss" ? "🛑 SL" : t.exitReason === "reverse_signal" ? "🔄 REV" : "⏱️ TO"}</div>
+            <div class="trade-profit ${w ? "positive" : "negative"}">${p}</div>
+            <div style="font-size:10px;color:#64748b;">${(x.profitPercent >= 0 ? "+" : "") + x.profitPercent.toFixed(2)}%</div>
+            <div style="font-size:8px;color:#475569;margin-top:2px;">${x.exitReason === "take_profit" ? "✅ TP" : x.exitReason === "stop_loss" ? "🛑 SL" : x.exitReason === "reverse_signal" ? "🔄 REV" : "⏱️ TO"}</div>
           </div>
-        </div>
-      `;
+        </div>`;
       })
       .join("");
-    if (trades.length > 20)
-      grid.innerHTML += `<div style="grid-column:1/-1; text-align:center; color:#475569; font-size:11px; padding:8px;">+ ${trades.length - 20} more...</div>`;
+    if (t.length > 20)
+      g.innerHTML += `<div style="grid-column:1/-1;text-align:center;color:#475569;font-size:11px;padding:8px;">+ ${t.length - 20} more...</div>`;
   }
-
   _updateStatsUI() {
     const s = this.stats;
     if (this.el.statTotal) this.el.statTotal.textContent = s.totalTrades;
     if (this.el.statWins) this.el.statWins.textContent = s.wins;
     if (this.el.statLosses) this.el.statLosses.textContent = s.losses;
     if (this.el.statWinrate) {
-      const wr = s.totalTrades ? s.winRate.toFixed(1) + "%" : "0%";
-      this.el.statWinrate.textContent = wr;
+      const w = s.totalTrades ? s.winRate.toFixed(1) + "%" : "0%";
+      this.el.statWinrate.textContent = w;
       this.el.statWinrate.style.color =
         s.winRate > 50 ? "#34d399" : s.winRate > 30 ? "#fbbf24" : "#f87171";
     }
     if (this.el.statPl) {
-      const pl = s.totalProfit;
-      this.el.statPl.textContent = (pl >= 0 ? "+" : "") + pl.toFixed(2) + "$";
+      const p = s.totalProfit;
+      this.el.statPl.textContent = (p >= 0 ? "+" : "") + p.toFixed(2) + "$";
       this.el.statPl.style.color =
-        pl > 0 ? "#34d399" : pl < 0 ? "#f87171" : "#94a3b8";
+        p > 0 ? "#34d399" : p < 0 ? "#f87171" : "#94a3b8";
     }
   }
-
-  setConnectionStatus(connected) {
-    const status = this.el.status;
-    if (status) {
-      status.textContent = connected ? "🟢 Live" : "🔴 Переподключение...";
-      status.style.color = connected ? "#34d399" : "#f87171";
+  setConnectionStatus(c) {
+    if (this.el.status) {
+      this.el.status.textContent = c ? "🟢 Live" : "🔴 Переподключение...";
+      this.el.status.style.color = c ? "#34d399" : "#f87171";
     }
     if (this.el.connectionInfo) {
-      this.el.connectionInfo.textContent = connected
-        ? "🟢 Подключен"
-        : "🔴 Отключен";
-      this.el.connectionInfo.style.color = connected ? "#34d399" : "#f87171";
+      this.el.connectionInfo.textContent = c ? "🟢 Подключен" : "🔴 Отключен";
+      this.el.connectionInfo.style.color = c ? "#34d399" : "#f87171";
     }
   }
-
-  setLastUpdate(time) {
-    if (this.el.lastUpdate) this.el.lastUpdate.textContent = time;
+  setLastUpdate(t) {
+    if (this.el.lastUpdate) this.el.lastUpdate.textContent = t;
   }
-  setSignalCount(count) {
-    if (this.el.signalCount) this.el.signalCount.textContent = count;
+  setSignalCount(c) {
+    if (this.el.signalCount) this.el.signalCount.textContent = c;
   }
-  setCacheStatus(text) {
-    if (this.el.cacheStatus) this.el.cacheStatus.textContent = text;
+  setCacheStatus(t) {
+    if (this.el.cacheStatus) this.el.cacheStatus.textContent = t;
   }
-  setHistoryStatus(text) {
-    if (this.el.historyStatus) this.el.historyStatus.textContent = text;
+  setHistoryStatus(t) {
+    if (this.el.historyStatus) this.el.historyStatus.textContent = t;
   }
-
   onTFChange = null;
 }
 
-// ---------- Главный класс приложения ----------
+// ---------- App ----------
 class App {
   constructor() {
     this.sound = new SoundManager();
@@ -3052,7 +2679,6 @@ class App {
     this.ui = new UIRenderer("signal-widget");
     this.ui.setSoundManager(this.sound);
     this.ui.onTFChange = (tf) => this.onTFChange(tf);
-
     this.marketData = new Map();
     this.signals = new Map();
     this.currentTF = CONFIG.defaultTF;
@@ -3062,57 +2688,44 @@ class App {
     this._signalThrottle = null;
     this._loadingAssets = new Set();
     this._loadedTF = null;
-
     this.fng = new FearGreedManager(CONFIG.fearGreed);
     this.marketState = null;
   }
-
   async init() {
     this.ui.render();
-    this._bindUIEvents();
     this.fng.start();
     this.marketState = new MarketStateWidget();
     this.marketState.start();
-
-    this.wsManager = new WSManager((data) => this._handleKline(data));
-    this.wsManager.onStatus = (connected) =>
-      this.ui.setConnectionStatus(connected);
+    this.wsManager = new WSManager((d) => this._handleKline(d));
+    this.wsManager.onStatus = (c) => this.ui.setConnectionStatus(c);
     this.wsManager.connect();
-
     await this._loadHistoricalData();
     this._generateSignals();
-
     this._updateInterval = setInterval(() => this._generateSignals(), 120000);
-    setInterval(() => {
-      this.ui.setLastUpdate(new Date().toLocaleTimeString());
-    }, 30000);
-
-    console.log("✅ Приложение инициализировано");
+    setInterval(
+      () => this.ui.setLastUpdate(new Date().toLocaleTimeString()),
+      30000,
+    );
+    console.log("✅ App init");
     window.__app = this;
   }
-
-  _bindUIEvents() {}
-
   async _loadHistoricalData() {
     const tf = this.currentTF;
     if (this._historyLoaded && this._loadedTF === tf) return;
     this.ui.setHistoryStatus("⏳ Загрузка...");
     let loaded = 0;
     for (const asset of CONFIG.assets) {
-      const symbol = CONFIG.symbolMap[asset];
       const candles = await this.dataLoader.fetchCandles(
-        symbol,
+        CONFIG.symbolMap[asset],
         tf,
         CONFIG.historyCandles,
       );
       if (candles && candles.length) {
         this.marketData.set(asset, candles);
         loaded++;
-      } else {
-        console.warn(`⚠️ Нет данных для ${asset}`);
       }
     }
-    this.ui.setCacheStatus(`${loaded}/${CONFIG.assets.length} активов`);
+    this.ui.setCacheStatus(`${loaded}/${CONFIG.assets.length}`);
     this._historyLoaded = loaded > 0;
     this._loadedTF = tf;
     if (loaded === 0) {
@@ -3121,56 +2734,48 @@ class App {
     }
     setTimeout(() => this._runBacktest(), 500);
   }
-
   async _runBacktest() {
-    const allTrades = [];
-    for (const asset of CONFIG.assets) {
-      const candles = this.marketData.get(asset);
-      if (!candles || candles.length < 100) continue;
-      const trades = await this.backtester.run(asset, candles, this.currentTF);
-      allTrades.push(...trades);
+    const all = [];
+    for (const a of CONFIG.assets) {
+      const c = this.marketData.get(a);
+      if (!c || c.length < 100) continue;
+      const t = await this.backtester.run(a, c, this.currentTF);
+      all.push(...t);
     }
-    allTrades.sort((a, b) => b.exitTime - a.exitTime);
-    this.ui.updateTradeHistory(
-      allTrades,
-      this.backtester.computeStats(allTrades),
-    );
-    this.ui.setHistoryStatus(`${allTrades.length} сделок`);
+    all.sort((a, b) => b.exitTime - a.exitTime);
+    this.ui.updateTradeHistory(all, this.backtester.computeStats(all));
+    this.ui.setHistoryStatus(`${all.length} сделок`);
   }
-
   _tfToMs(tf) {
-    const map = {
+    const m = {
       "15m": 15 * 60 * 1000,
       "1h": 60 * 60 * 1000,
       "2h": 2 * 60 * 60 * 1000,
       "4h": 4 * 60 * 60 * 1000,
       "1d": 24 * 60 * 60 * 1000,
     };
-    return map[tf] || map["1h"];
+    return m[tf] || m["1h"];
   }
-
-  // ФИКС: накапливаем volume при обновлении текущей TF-свечи
+  // ФИКС: накапливаем volume
   _handleKline(data) {
-    const k = data.k;
-    const symbol = data.s;
+    const k = data.k,
+      sym = data.s;
     const asset = Object.keys(CONFIG.symbolMap).find(
-      (a) => CONFIG.symbolMap[a] === symbol,
+      (a) => CONFIG.symbolMap[a] === sym,
     );
     if (!asset || !CONFIG.assets.includes(asset)) return;
     if (!this.marketData.has(asset)) this.marketData.set(asset, []);
     const candles = this.marketData.get(asset);
-    const openTime = Number(k.t);
     const tfMs = this._tfToMs(this.currentTF);
-    const bucket = Math.floor(openTime / tfMs) * tfMs;
+    const bucket = Math.floor(Number(k.t) / tfMs) * tfMs;
     const last = candles[candles.length - 1];
-    const lastBucket = last ? Math.floor(last.time / tfMs) * tfMs : null;
-
-    if (last && lastBucket === bucket) {
+    const lastB = last ? Math.floor(last.time / tfMs) * tfMs : null;
+    if (last && lastB === bucket) {
       last.high = Math.max(last.high, +k.h);
       last.low = Math.min(last.low, +k.l);
       last.close = +k.c;
-      last.volume += +k.v; // ФИКС: накапливаем объём
-    } else if (!last || bucket > lastBucket) {
+      last.volume += +k.v; // ФИКС
+    } else if (!last || bucket > lastB) {
       candles.push({
         open: +k.o,
         high: +k.h,
@@ -3180,7 +2785,6 @@ class App {
         time: bucket,
       });
     }
-
     if (candles.length > CONFIG.maxCandles) candles.splice(0, 100);
     if (!this._signalThrottle) {
       this._signalThrottle = setTimeout(() => {
@@ -3189,61 +2793,55 @@ class App {
       }, 30000);
     }
   }
-
-  // ФИКС: не переподключаем WS при смене TF — стримы 1m не зависят от TF
   async onTFChange(tf) {
     this.currentTF = tf;
     this._historyLoaded = false;
     await this._loadHistoricalData();
     this._generateSignals();
   }
-
   _generateSignals() {
     const tf = this.currentTF;
-    let activeCount = 0;
+    let active = 0;
     for (const asset of CONFIG.assets) {
-      const candles = this.marketData.get(asset);
-      if (!candles || candles.length < CONFIG.minCandlesRequired) {
+      const c = this.marketData.get(asset);
+      if (!c || c.length < CONFIG.minCandlesRequired) {
         if (!this._loadingAssets.has(asset)) this._loadAssetData(asset);
         continue;
       }
-      const agg = utils.aggregateCandles(candles, tf);
+      const agg = utils.aggregateCandles(c, tf);
       if (!agg || agg.length < CONFIG.minCandlesRequired) continue;
-      const signal = this.signalGen.generate(asset, tf, agg);
-      if (signal) {
-        this.signals.set(asset, signal);
-        this.ui.updateSignal(asset, signal);
+      const sig = this.signalGen.generate(asset, tf, agg);
+      if (sig) {
+        this.signals.set(asset, sig);
+        this.ui.updateSignal(asset, sig);
         if (
-          (signal.scoreDirection || signal.direction) !== "NEUTRAL" &&
-          signal.confidence >= 60
+          (sig.scoreDirection || sig.direction) !== "NEUTRAL" &&
+          sig.confidence >= 60
         )
-          activeCount++;
+          active++;
       }
     }
-    this.ui.setSignalCount(activeCount);
+    this.ui.setSignalCount(active);
     this.ui.setLastUpdate(new Date().toLocaleTimeString());
   }
-
   async _loadAssetData(asset) {
     if (this._loadingAssets.has(asset)) return;
     this._loadingAssets.add(asset);
     try {
-      const symbol = CONFIG.symbolMap[asset];
-      const candles = await this.dataLoader.fetchCandles(
-        symbol,
+      const c = await this.dataLoader.fetchCandles(
+        CONFIG.symbolMap[asset],
         this.currentTF,
         CONFIG.historyCandles,
       );
-      if (candles && candles.length) {
-        this.marketData.set(asset, candles);
+      if (c && c.length) {
+        this.marketData.set(asset, c);
         this._generateSignals();
-        this.ui.setCacheStatus(`📊 ${this.marketData.size} активов`);
+        this.ui.setCacheStatus(`📊 ${this.marketData.size}`);
       }
     } finally {
       this._loadingAssets.delete(asset);
     }
   }
-
   destroy() {
     if (this.wsManager) this.wsManager.close();
     if (this._updateInterval) clearInterval(this._updateInterval);
@@ -3252,11 +2850,9 @@ class App {
     if (this.marketState) this.marketState.stop();
     if (this.ui?.tfGuide) this.ui.tfGuide.destroy();
     this.sound.clearAll();
-    console.log("🧹 Приложение уничтожено");
   }
 }
 
-// ---------- Запуск ----------
 document.addEventListener("DOMContentLoaded", () => {
   const app = new App();
   app.init();
