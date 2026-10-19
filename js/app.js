@@ -1,12 +1,14 @@
 // ============================================================
-//  МОДУЛЬ CRYPTO SIGNAL TOOL (v10.2)
+//  МОДУЛЬ CRYPTO SIGNAL TOOL (v10.3)
 //  + Fear & Greed Index
 //  + Market State Widget (Macro Heatmap)
-//  + Выпадающая документация справа под ms-panel
 //  + TF-arrow: выпадающая карточка doc-card активного TF
 //  + КОНФИГУРИРУЕМЫЕ ВЕСА ИНДИКАТОРОВ С АВТОНОРМИРОВКОЙ К 100%
-//  + РАСШИРЕННЫЕ ГАЙДЫ ПО ТАЙМФРЕЙМАМ (v10.2)
-//  + ms-panel закрывается только принудительно (клик вне / Esc / toggle)
+//  + РАСШИРЕННЫЕ ГАЙДЫ ПО ТАЙМФРЕЙМАМ
+//  + indicatorStates: сырые значения всех 7 индикаторов в UI
+//  + Фиксы: _macd, _poc, _normalizeCandles, _handleKline volume,
+//           нормализация процентов по весу, нейтральные состояния,
+//           единая агрегация свечей, оптимизация бэктеста
 // ============================================================
 
 // ---------- Конфигурация ----------
@@ -27,7 +29,7 @@ const CONFIG = {
   tfMinutes: { "15m": 15, "1h": 60, "2h": 120, "4h": 240, "1d": 1440 },
   defaultTF: "1h",
   wsEndpoint: "wss://stream.binance.com:9443/ws",
-  maxCandles: 1000,
+  maxCandles: 1500,
   historyCandles: 1500,
   minCandlesRequired: 50,
   trading: {
@@ -59,14 +61,13 @@ const CONFIG = {
     intervalMs: 5 * 60 * 1000,
     neutralFallback: 50,
   },
-
   scoring: {
     weights: {
       rsi: 20,
-      macd: 10,
-      ema: 10,
+      macd: 20,
+      ema: 20,
       cvd: 10,
-      bb: 20,
+      bb: 10,
       volume: 20,
       poc: 20,
     },
@@ -107,7 +108,7 @@ const MACRO_SCALE = [
 ];
 
 // ============================================================
-//  ГАЙДЫ ПО ТАЙМФРЕЙМАМ (расширенные, v10.2)
+//  ГАЙДЫ ПО ТАЙМФРЕЙМАМ
 // ============================================================
 const TF_GUIDES = {
   "15m": {
@@ -115,25 +116,11 @@ const TF_GUIDES = {
     icon: "⚡",
     tagline: "Скальпинг • Высокий риск",
     description:
-      "<b>Что смотреть в первую очередь:</b> Volume Spike + CVD + RSI<br>" +
-      "• MACD на 15m даёт много ложных сигналов — вес снижается автоматически<br>" +
-      "• EMA Ribbon работает только если все 4 EMA выстроены в идеальный порядок<br>" +
-      "• 15m — самый шумный TF. Без подтверждения старшего TF — не входить.",
+      "<b>Что смотреть в первую очередь:</b> Volume Spike + CVD + RSI<br>• MACD на 15m даёт много ложных сигналов — вес снижается автоматически<br>• EMA Ribbon работает только если все 4 EMA выстроены в идеальный порядок<br>• 15m — самый шумный TF. Без подтверждения старшего TF — не входить.",
     entryDescription:
-      "<b>Когда входить:</b><br>" +
-      "• RSI &lt; 30 (перепродан) и CVD растёт (покупатели возвращаются)<br>" +
-      "• Volume Spike &gt; 1.5× от среднего и цена выше EMA8<br>" +
-      "• Цена касается нижней полосы Боллинджера и отскакивает<br>" +
-      "• POC рядом (в пределах 0.2 ATR) — уровень поддержки<br>" +
-      "• Confidence ≥ 75% и HTF (1h) подтверждает",
+      "<b>Когда входить:</b><br>• RSI &lt; 30 (перепродан) и CVD растёт (покупатели возвращаются)<br>• Volume Spike &gt; 1.5× от среднего и цена выше EMA8<br>• Цена касается нижней полосы Боллинджера и отскакивает<br>• POC рядом (в пределах 0.2 ATR) — уровень поддержки<br>• Confidence ≥ 75% и HTF (1h) подтверждает",
     waitDescription:
-      "<b>Когда ждать:</b><br>" +
-      "• Bollinger Width &lt; 0.05 — сжатие, рынок в боковике → не входить, ждать пробоя<br>" +
-      "• RSI между 40–60 и MACD флэт → нет импульса<br>" +
-      "• CVD и цена расходятся → ложный сигнал<br>" +
-      "• BB Width &gt; 0.1 — волатильность высока, рынок в шуме<br>" +
-      "• EMA Ribbon не в порядке → тренд не определён<br>" +
-      "• Нет Volume Spike → нет топлива для движения",
+      "<b>Когда ждать:</b><br>• Bollinger Width &lt; 0.05 — сжатие, рынок в боковике → не входить, ждать пробоя<br>• RSI между 40–60 и MACD флэт → нет импульса<br>• CVD и цена расходятся → ложный сигнал<br>• BB Width &gt; 0.1 — волатильность высока, рынок в шуме<br>• EMA Ribbon не в порядке → тренд не определён<br>• Нет Volume Spike → нет топлива для движения",
     action: {
       BUY: "Скальпинг. Цель: +0.5-1.5%. Стоп: -0.5-1%.",
       SELL: "Краткосрочный выход. Цель: +0.5-1.5%. Стоп: -0.5-1%.",
@@ -147,31 +134,16 @@ const TF_GUIDES = {
     holdTime: "15–60 минут",
     proTip: "Профи не торгуют 15m без HTF-подтверждения — слишком много шума.",
   },
-
   "1h": {
     name: "1 Час",
     icon: "🕐",
     tagline: "Стандартный внутридневной",
     description:
-      "<b>Что смотреть в первую очередь:</b> MACD + EMA Ribbon + RSI<br>" +
-      "• «Золотая середина»: достаточно данных для тренда, но не слишком медленно<br>" +
-      "• CVD начинает давать значимые сигналы (не шум)<br>" +
-      "• Лучшее соотношение сигнал/шум среди всех TF.",
+      "<b>Что смотреть в первую очередь:</b> MACD + EMA Ribbon + RSI<br>• «Золотая середина»: достаточно данных для тренда, но не слишком медленно<br>• CVD начинает давать значимые сигналы (не шум)<br>• Лучшее соотношение сигнал/шум среди всех TF.",
     entryDescription:
-      "<b>Когда входить:</b><br>" +
-      "• EMA8 &gt; EMA13 &gt; EMA21 &gt; EMA50 (полный бычий порядок)<br>" +
-      "• MACD histogram &gt; 0 и растёт (импульс набирает силу)<br>" +
-      "• RSI 40–65 (не перекуплен, есть запас роста)<br>" +
-      "• CVD растёт и положительный<br>" +
-      "• Volume Spike подтверждает вход<br>" +
-      "• HTF (4h) подтверждает направление",
+      "<b>Когда входить:</b><br>• EMA8 &gt; EMA13 &gt; EMA21 &gt; EMA50 (полный бычий порядок)<br>• MACD histogram &gt; 0 и растёт (импульс набирает силу)<br>• RSI 40–65 (не перекуплен, есть запас роста)<br>• CVD растёт и положительный<br>• Volume Spike подтверждает вход<br>• HTF (4h) подтверждает направление",
     waitDescription:
-      "<b>Когда ждать:</b><br>" +
-      "• EMA выстроены в «спутанный клубок» — нет тренда<br>" +
-      "• MACD histogram колеблется вокруг нуля<br>" +
-      "• Confidence &lt; 65% — сигнал слабый, ждать 2H+<br>" +
-      "• HTF (4h) не подтверждает направление<br>" +
-      "• RSI 40–60 и нет чёткого импульса",
+      "<b>Когда ждать:</b><br>• EMA выстроены в «спутанный клубок» — нет тренда<br>• MACD histogram колеблется вокруг нуля<br>• Confidence &lt; 65% — сигнал слабый, ждать 2H+<br>• HTF (4h) не подтверждает направление<br>• RSI 40–60 и нет чёткого импульса",
     action: {
       BUY: "Стандартный вход. Цель: +1-3%. Стоп: -1-1.5%.",
       SELL: "Стандартный выход. Цель: +1-3%. Стоп: -1-1.5%.",
@@ -186,30 +158,16 @@ const TF_GUIDES = {
     proTip:
       "1h — оптимальный TF для большинства. Здесь лучшее соотношение сигнал/шум.",
   },
-
   "2h": {
     name: "2 Часа",
     icon: "🕑",
     tagline: "Свинг-трейдинг",
     description:
-      "<b>Что смотреть в первую очередь:</b> EMA Ribbon + POC + MACD<br>" +
-      "• Тренд более устойчив, меньше ложных пробоев<br>" +
-      "• POC начинает работать как реальный уровень поддержки/сопротивления<br>" +
-      "• Хорошо подходит для удержания позиции через ночь.",
+      "<b>Что смотреть в первую очередь:</b> EMA Ribbon + POC + MACD<br>• Тренд более устойчив, меньше ложных пробоев<br>• POC начинает работать как реальный уровень поддержки/сопротивления<br>• Хорошо подходит для удержания позиции через ночь.",
     entryDescription:
-      "<b>Когда входить:</b><br>" +
-      "• Цена выше EMA50 и EMA Ribbon выстроена<br>" +
-      "• MACD line &gt; signal line, histogram растёт<br>" +
-      "• RSI 45–70<br>" +
-      "• POC ниже цены (поддержка под нами)<br>" +
-      "• CVD стабильно положительный",
+      "<b>Когда входить:</b><br>• Цена выше EMA50 и EMA Ribbon выстроена<br>• MACD line &gt; signal line, histogram растёт<br>• RSI 45–70<br>• POC ниже цены (поддержка под нами)<br>• CVD стабильно положительный",
     waitDescription:
-      "<b>Когда ждать:</b><br>" +
-      "• Цена зажата между EMA21 и EMA50<br>" +
-      "• Bollinger Width сжимается (&lt; 0.08) — перед большим движением, но направление неясно<br>" +
-      "• RSI дивергенция (цена растёт, RSI падает) — разворот<br>" +
-      "• Confidence &lt; 70%<br>" +
-      "• POC прямо над ценой — сопротивление",
+      "<b>Когда ждать:</b><br>• Цена зажата между EMA21 и EMA50<br>• Bollinger Width сжимается (&lt; 0.08) — перед большим движением, но направление неясно<br>• RSI дивергенция (цена растёт, RSI падает) — разворот<br>• Confidence &lt; 70%<br>• POC прямо над ценой — сопротивление",
     action: {
       BUY: "Свинг-трейдинг. Цель: +2-4%. Стоп: -1.5-2%.",
       SELL: "Свинг-выход. Цель: +2-4%. Стоп: -1.5-2%.",
@@ -223,36 +181,16 @@ const TF_GUIDES = {
     holdTime: "4–24 часа",
     proTip: "2h — компромисс между скоростью 1h и надёжностью 4h.",
   },
-
   "4h": {
     name: "4 Часа",
     icon: "🕓",
     tagline: "Среднесрочный • Рекомендуемый профи",
     description:
-      "<b>Что смотреть в первую очередь:</b> EMA Ribbon + MACD + POC + CVD<br>" +
-      "• <b>Основной TF для профессиональной торговли</b><br>" +
-      "• Все 7 индикаторов работают максимально надёжно<br>" +
-      "• HTF подтверждение от 1d обязательно<br>" +
-      "• Оптимальное R:R (риск/прибыль) — «рабочая лошадка» профи.",
+      "<b>Что смотреть в первую очередь:</b> EMA Ribbon + MACD + POC + CVD<br>• <b>Основной TF для профессиональной торговли</b><br>• Все 7 индикаторов работают максимально надёжно<br>• HTF подтверждение от 1d обязательно<br>• Оптимальное R:R (риск/прибыль) — «рабочая лошадка» профи.",
     entryDescription:
-      "<b>Когда входить («идеальный шторм»):</b><br>" +
-      "1. EMA Ribbon: EMA8 &gt; EMA13 &gt; EMA21 &gt; EMA50 (без пересечений)<br>" +
-      "2. MACD: histogram &gt; 0 и растёт 2+ свечи<br>" +
-      "3. RSI: 45–68 (здоровый бычий диапазон)<br>" +
-      "4. CVD: растёт и положительный (реальные покупки)<br>" +
-      "5. Volume Spike: &gt; 1.3× подтверждает движение<br>" +
-      "6. POC: ниже цены, работает как поддержка<br>" +
-      "7. Bollinger: цена не у верхней границы (есть куда расти)<br>" +
-      "8. HTF (1d): цена выше EMA50 на дневке<br>" +
-      "9. Confidence ≥ 75%",
+      "<b>Когда входить («идеальный шторм»):</b><br>1. EMA Ribbon: EMA8 &gt; EMA13 &gt; EMA21 &gt; EMA50 (без пересечений)<br>2. MACD: histogram &gt; 0 и растёт 2+ свечи<br>3. RSI: 45–68 (здоровый бычий диапазон)<br>4. CVD: растёт и положительный (реальные покупки)<br>5. Volume Spike: &gt; 1.3× подтверждает движение<br>6. POC: ниже цены, работает как поддержка<br>7. Bollinger: цена не у верхней границы (есть куда расти)<br>8. HTF (1d): цена выше EMA50 на дневке<br>9. Confidence ≥ 75%",
     waitDescription:
-      "<b>Когда ждать:</b><br>" +
-      "• RSI &gt; 70 (перекуплен) — не входить в лонг<br>" +
-      "• Bollinger squeeze (&lt; 0.07) — ждать пробоя<br>" +
-      "• Цена у POC сверху — сопротивление<br>" +
-      "• 1d не подтверждает (цена ниже EMA50 на дневке)<br>" +
-      "• Confidence 60–70% — ждать усиления<br>" +
-      "• Новости / FOMC / CPI — ждать 30 мин после релиза",
+      "<b>Когда ждать:</b><br>• RSI &gt; 70 (перекуплен) — не входить в лонг<br>• Bollinger squeeze (&lt; 0.07) — ждать пробоя<br>• Цена у POC сверху — сопротивление<br>• 1d не подтверждает (цена ниже EMA50 на дневке)<br>• Confidence 60–70% — ждать усиления<br>• Новости / FOMC / CPI — ждать 30 мин после релиза",
     action: {
       BUY: "Среднесрочный вход. Цель: +3-6%. Стоп: -2-3%.",
       SELL: "Среднесрочный выход. Цель: +3-6%. Стоп: -2-3%.",
@@ -267,31 +205,16 @@ const TF_GUIDES = {
     proTip:
       "4h — «рабочая лошадка» профи. Меньше шума, чем 1h, больше возможностей, чем 1d.",
   },
-
   "1d": {
     name: "День",
     icon: "🗓",
     tagline: "Долгосрочный • Низкий риск",
     description:
-      "<b>Что смотреть в первую очередь:</b> EMA Ribbon + POC + Bollinger<br>" +
-      "• RSI и MACD здесь — вспомогательные<br>" +
-      "• CVD на дневке — сильный сигнал смены тренда<br>" +
-      "• Volume Spike — редкое, но мощное событие<br>" +
-      "• Подходит для позиционной торговли и инвестиций.",
+      "<b>Что смотреть в первую очередь:</b> EMA Ribbon + POC + Bollinger<br>• RSI и MACD здесь — вспомогательные<br>• CVD на дневке — сильный сигнал смены тренда<br>• Volume Spike — редкое, но мощное событие<br>• Подходит для позиционной торговли и инвестиций.",
     entryDescription:
-      "<b>Когда входить:</b><br>" +
-      "• EMA8 &gt; EMA13 &gt; EMA21 &gt; EMA50 (устойчивый бычий тренд)<br>" +
-      "• Цена выше EMA50 более 5 свечей<br>" +
-      "• RSI 50–70 (стабильный бычий диапазон)<br>" +
-      "• POC значительно ниже цены<br>" +
-      "• Volume Spike на прорыве ключевого уровня",
+      "<b>Когда входить:</b><br>• EMA8 &gt; EMA13 &gt; EMA21 &gt; EMA50 (устойчивый бычий тренд)<br>• Цена выше EMA50 более 5 свечей<br>• RSI 50–70 (стабильный бычий диапазон)<br>• POC значительно ниже цены<br>• Volume Spike на прорыве ключевого уровня",
     waitDescription:
-      "<b>Когда ждать:</b><br>" +
-      "• RSI &lt; 40 на дневке — медвежий рынок<br>" +
-      "• EMA Ribbon «спутан» — глобальная неопределённость<br>" +
-      "• Цена ниже EMA50 — не покупать<br>" +
-      "• Bollinger Width &gt; 0.3 — экстремальная волатильность<br>" +
-      "• F&amp;G &lt; 20 или &gt; 80 — экстрим, возможен разворот",
+      "<b>Когда ждать:</b><br>• RSI &lt; 40 на дневке — медвежий рынок<br>• EMA Ribbon «спутан» — глобальная неопределённость<br>• Цена ниже EMA50 — не покупать<br>• Bollinger Width &gt; 0.3 — экстремальная волатильность<br>• F&amp;G &lt; 20 или &gt; 80 — экстрим, возможен разворот",
     action: {
       BUY: "Долгосрочный вход. Цель: +5-15%. Стоп: -3-5%.",
       SELL: "Долгосрочный выход. Цель: +5-15%. Стоп: -3-5%.",
@@ -328,6 +251,31 @@ const utils = {
       return def;
     }
   },
+  // Единая агрегация свечей — используется в SignalGenerator, Backtester, App
+  aggregateCandles: (candles, tf) => {
+    const minutes = CONFIG.tfMinutes[tf] || 60;
+    if (!candles || !candles.length) return [];
+    const agg = [];
+    let current = null;
+    for (const c of candles) {
+      if (!current) {
+        current = { ...c };
+        continue;
+      }
+      const diff = (c.time - current.time) / (60 * 1000);
+      if (diff >= minutes) {
+        agg.push(current);
+        current = { ...c };
+      } else {
+        current.high = Math.max(current.high, c.high);
+        current.low = Math.min(current.low, c.low);
+        current.close = c.close;
+        current.volume += c.volume;
+      }
+    }
+    if (current) agg.push(current);
+    return agg;
+  },
 };
 
 // ---------- Менеджер звука ----------
@@ -360,6 +308,17 @@ class SoundManager {
     });
     if (this._audio.readyState >= 3) this._loaded = true;
     this._loadState();
+
+    // AudioContext требует user gesture — резюмируем при первом клике
+    const resumeOnGesture = () => {
+      if (this._audioCtx && this._audioCtx.state === "suspended") {
+        this._audioCtx.resume().catch(() => {});
+      }
+      document.removeEventListener("click", resumeOnGesture);
+      document.removeEventListener("touchstart", resumeOnGesture);
+    };
+    document.addEventListener("click", resumeOnGesture);
+    document.addEventListener("touchstart", resumeOnGesture);
   }
 
   _initWebAudio() {
@@ -752,11 +711,20 @@ class DataLoader {
     }
   }
 
+  // ФИКС: мержим дубликаты вместо затирания
   _normalizeCandles(candles) {
     const byTime = new Map();
     for (const c of candles) {
       if (!c || !Number.isFinite(c.time) || !Number.isFinite(c.close)) continue;
-      byTime.set(c.time, c);
+      const existing = byTime.get(c.time);
+      if (existing) {
+        existing.high = Math.max(existing.high, c.high);
+        existing.low = Math.min(existing.low, c.low);
+        existing.close = c.close;
+        existing.volume = Math.max(existing.volume, c.volume);
+      } else {
+        byTime.set(c.time, c);
+      }
     }
     return [...byTime.values()].sort((a, b) => a.time - b.time);
   }
@@ -918,16 +886,17 @@ class IndicatorCalculator {
     return ema;
   }
 
+  // ФИКС: корректные индексы MACD без хрупких слайсов
   _macd(data, fast, slow, signal) {
-    if (data.length < slow) return { macd: [], signal: [], histogram: [] };
+    if (data.length < slow + signal)
+      return { macd: [], signal: [], histogram: [] };
     const emaFast = this._ema(data, fast);
     const emaSlow = this._ema(data, slow);
     const macdLine = emaFast.map((v, i) => v - emaSlow[i]);
-    const signalLine = this._ema(macdLine.slice(slow - fast), signal);
-    const histogram = macdLine
-      .slice(slow - fast)
-      .map((v, i) => v - signalLine[i]);
-    return { macd: macdLine.slice(slow - fast), signal: signalLine, histogram };
+    const macdForSignal = macdLine.slice(slow - 1);
+    const signalLine = this._ema(macdForSignal, signal);
+    const histogram = macdForSignal.map((v, i) => v - signalLine[i]);
+    return { macd: macdForSignal, signal: signalLine, histogram };
   }
 
   _atr(candles, period) {
@@ -952,25 +921,26 @@ class IndicatorCalculator {
     return atr;
   }
 
+  // ФИКС: бакеты привязаны к minP, а не к абсолютной цене
   _poc(candles) {
     if (!candles.length) return 0;
-    const priceLevels = new Map();
     const minP = Math.min(...candles.map((c) => c.low));
     const maxP = Math.max(...candles.map((c) => c.high));
     const bucketSize = (maxP - minP) / 50 || 0.01;
+    const priceLevels = new Map();
     candles.forEach((c) => {
-      const bucket = Math.floor(c.close / (bucketSize || 0.01));
+      const bucket = Math.floor((c.close - minP) / bucketSize);
       priceLevels.set(bucket, (priceLevels.get(bucket) || 0) + c.volume);
     });
     let maxVol = 0,
-      pocBucket = 0;
-    for (const [bucket, vol] of priceLevels) {
-      if (vol > maxVol) {
-        maxVol = vol;
-        pocBucket = bucket;
+      bestBucket = 0;
+    for (const [b, v] of priceLevels) {
+      if (v > maxVol) {
+        maxVol = v;
+        bestBucket = b;
       }
     }
-    return pocBucket * (bucketSize || 0.01) + (bucketSize || 0.01) / 2;
+    return minP + (bestBucket + 0.5) * bucketSize;
   }
 
   _cvd(candles) {
@@ -1031,7 +1001,9 @@ class SignalGenerator {
     let buyRaw = 0,
       sellRaw = 0;
     const scores = {};
+    const indicatorStates = {};
 
+    // RSI
     {
       const rsi = ind.rsi,
         w = W.rsi,
@@ -1048,8 +1020,15 @@ class SignalGenerator {
       if (raw > 0) buyRaw += raw;
       else sellRaw += -raw;
       scores.rsi = (raw / totalWeight) * 100;
+      indicatorStates.rsi = {
+        value: Math.round(ind.rsi),
+        bias:
+          ind.rsi < 30 ? "oversold" : ind.rsi > 70 ? "overbought" : "neutral",
+        contribution: scores.rsi,
+      };
     }
 
+    // MACD
     {
       const w = W.macd,
         g = G.macd,
@@ -1062,31 +1041,47 @@ class SignalGenerator {
       if (raw > 0) buyRaw += raw;
       else sellRaw += -raw;
       scores.macd = (raw / totalWeight) * 100;
+      indicatorStates.macd = {
+        value: ind.macdHist.toFixed(4),
+        bias:
+          ind.macdHist > 0 && ind.macdLine > ind.macdSignal
+            ? "bullish"
+            : ind.macdHist < 0 && ind.macdLine < ind.macdSignal
+              ? "bearish"
+              : ind.macdHist > ind.macdPrevHist
+                ? "growing"
+                : "falling",
+        contribution: scores.macd,
+      };
     }
 
+    // EMA Ribbon
     {
       const w = W.ema,
         c = ind.close;
       let raw = 0;
-      if (
+      const fullBull =
         c > ind.ema8 &&
         ind.ema8 > ind.ema13 &&
         ind.ema13 > ind.ema21 &&
-        ind.ema21 > ind.ema50
-      )
-        raw = w;
-      else if (
+        ind.ema21 > ind.ema50;
+      const fullBear =
         c < ind.ema8 &&
         ind.ema8 < ind.ema13 &&
         ind.ema13 < ind.ema21 &&
-        ind.ema21 < ind.ema50
-      )
-        raw = -w;
+        ind.ema21 < ind.ema50;
+      if (fullBull) raw = w;
+      else if (fullBear) raw = -w;
       if (raw > 0) buyRaw += raw;
       else sellRaw += -raw;
       scores.ema = (raw / totalWeight) * 100;
+      indicatorStates.ema = {
+        bias: fullBull ? "full-bull" : fullBear ? "full-bear" : "mixed",
+        contribution: scores.ema,
+      };
     }
 
+    // CVD
     {
       const w = W.cvd;
       let raw = 0;
@@ -1095,8 +1090,19 @@ class SignalGenerator {
       if (raw > 0) buyRaw += raw;
       else sellRaw += -raw;
       scores.cvd = (raw / totalWeight) * 100;
+      indicatorStates.cvd = {
+        value: ind.cvd.toFixed(0),
+        bias:
+          ind.cvd > ind.cvdPrev
+            ? "rising"
+            : ind.cvd < ind.cvdPrev
+              ? "falling"
+              : "flat",
+        contribution: scores.cvd,
+      };
     }
 
+    // Bollinger
     {
       const w = W.bb,
         g = G.bb,
@@ -1109,8 +1115,22 @@ class SignalGenerator {
       if (raw > 0) buyRaw += raw;
       else sellRaw += -raw;
       scores.bb = (raw / totalWeight) * 100;
+      indicatorStates.bb = {
+        width: (ind.bbWidth * 100).toFixed(1) + "%",
+        position:
+          c < ind.bbLower
+            ? "below-lower"
+            : c > ind.bbUpper
+              ? "above-upper"
+              : c > ind.bbMiddle
+                ? "above-middle"
+                : "below-middle",
+        squeeze: ind.bbWidth < 0.1,
+        contribution: scores.bb,
+      };
     }
 
+    // Volume
     {
       const w = W.volume,
         c = ind.close;
@@ -1121,8 +1141,14 @@ class SignalGenerator {
       if (raw > 0) buyRaw += raw;
       else sellRaw += -raw;
       scores.volume = (raw / totalWeight) * 100;
+      indicatorStates.volume = {
+        ratio: volRatio.toFixed(2),
+        spike: volRatio > 1.5,
+        contribution: scores.volume,
+      };
     }
 
+    // POC
     {
       const w = W.poc,
         c = ind.close;
@@ -1134,6 +1160,12 @@ class SignalGenerator {
       if (raw > 0) buyRaw += raw;
       else sellRaw += -raw;
       scores.poc = (raw / totalWeight) * 100;
+      indicatorStates.poc = {
+        value: ind.poc.toFixed(2),
+        distance: ((c - ind.poc) / atr).toFixed(2) + " ATR",
+        near: pocDist < 0.2,
+        contribution: scores.poc,
+      };
     }
 
     const netRaw = buyRaw - sellRaw;
@@ -1202,6 +1234,7 @@ class SignalGenerator {
       },
       actionProbabilities: actionProbs,
       indicatorScores: scoresPct,
+      indicatorStates,
       status: "Активен",
     };
   }
@@ -1227,35 +1260,11 @@ class SignalGenerator {
     if (!CONFIG.trading.requireHtfConfirm) return true;
     const htf = this._htfFor(tf);
     if (!htf) return true;
-    const agg = this._aggregate(candles, htf);
+    const agg = utils.aggregateCandles(candles, htf);
     if (!agg || agg.length < CONFIG.minCandlesRequired) return false;
     const ind = this.indicatorCalc.calculateAll(agg, htf);
     if (!ind) return false;
     return side === "BUY" ? ind.close > ind.ema50 : ind.close < ind.ema50;
-  }
-
-  _aggregate(candles, tf) {
-    const minutes = CONFIG.tfMinutes[tf] || 60;
-    const agg = [];
-    let current = null;
-    for (const c of candles) {
-      if (!current) {
-        current = { ...c };
-        continue;
-      }
-      const diff = (c.time - current.time) / (60 * 1000);
-      if (diff >= minutes) {
-        agg.push(current);
-        current = { ...c };
-      } else {
-        current.high = Math.max(current.high, c.high);
-        current.low = Math.min(current.low, c.low);
-        current.close = c.close;
-        current.volume += c.volume;
-      }
-    }
-    if (current) agg.push(current);
-    return agg;
   }
 
   _calcActionProbs(buyRaw, sellRaw, trendStrength, bbWidth, totalWeight) {
@@ -1285,6 +1294,7 @@ class SignalGenerator {
   }
 
   _emptySignal(asset, tf) {
+    const safeTf = tf || CONFIG.defaultTF;
     const emptyScores = {
       rsi: 0,
       macd: 0,
@@ -1294,15 +1304,29 @@ class SignalGenerator {
       volume: 0,
       poc: 0,
     };
+    const emptyStates = {
+      rsi: { value: 0, bias: "neutral", contribution: 0 },
+      macd: { value: "0.0000", bias: "flat", contribution: 0 },
+      ema: { bias: "mixed", contribution: 0 },
+      cvd: { value: "0", bias: "flat", contribution: 0 },
+      bb: {
+        width: "0%",
+        position: "above-middle",
+        squeeze: false,
+        contribution: 0,
+      },
+      volume: { ratio: "0.00", spike: false, contribution: 0 },
+      poc: { value: "0", distance: "0 ATR", near: false, contribution: 0 },
+    };
     return {
       asset,
-      timeframe: tf || "1h",
+      timeframe: safeTf,
       direction: "NEUTRAL",
       scoreDirection: "NEUTRAL",
       confidence: 0,
       price: 0,
       atr: 0,
-      htfTimeframe: this._htfFor(tf),
+      htfTimeframe: this._htfFor(safeTf),
       htfConfirmed: false,
       timestamp: Date.now(),
       indicators: {
@@ -1316,6 +1340,7 @@ class SignalGenerator {
       },
       actionProbabilities: { wait: 100, buy: 0, sell: 0 },
       indicatorScores: emptyScores,
+      indicatorStates: emptyStates,
       status: "⏳ Загрузка...",
     };
   }
@@ -1337,17 +1362,16 @@ class Backtester {
 
   async run(asset, candles, tf) {
     if (!candles || candles.length < 100) return [];
-    const agg = this._aggregate(candles, tf);
+    const agg = utils.aggregateCandles(candles, tf);
     if (agg.length < 100) return [];
 
     const trades = [];
-    let position = null,
-      entryPrice = 0,
-      entryTime = 0,
-      direction = "";
+    let position = null;
     const config = CONFIG.trading;
 
-    for (let i = 100; i < agg.length; i++) {
+    // ФИКС: шаг 3 бара вместо 1 — снижаем нагрузку в 3 раза
+    const STEP = 3;
+    for (let i = 100; i < agg.length; i += STEP) {
       const windowCandles = agg.slice(0, i + 1);
       const current = agg[i];
       const price = current.close;
@@ -1355,12 +1379,14 @@ class Backtester {
 
       if (position) {
         const move =
-          direction === "BUY" ? price - entryPrice : entryPrice - price;
+          position.direction === "BUY"
+            ? price - position.entryPrice
+            : position.entryPrice - price;
         const isOpposite =
           signal &&
           signal.confidence >= config.minConfidence &&
-          ((direction === "BUY" && signal.direction === "SELL") ||
-            (direction === "SELL" && signal.direction === "BUY"));
+          ((position.direction === "BUY" && signal.direction === "SELL") ||
+            (position.direction === "SELL" && signal.direction === "BUY"));
 
         if (move >= position.takeProfitDistance) {
           trades.push(
@@ -1407,9 +1433,6 @@ class Backtester {
           stopDistance: levels.stopDistance,
           takeProfitDistance: levels.takeProfitDistance,
         };
-        entryPrice = price;
-        entryTime = current.time;
-        direction = signal.direction;
       }
     }
 
@@ -1461,9 +1484,9 @@ class Backtester {
       asset: pos.asset || "UNKNOWN",
       direction: pos.direction,
       entryPrice: pos.entryPrice,
-      exitPrice: exitPrice,
+      exitPrice,
       entryTime: pos.entryTime,
-      exitTime: exitTime,
+      exitTime,
       profitPercent: profit,
       profit: (profit / 100) * CONFIG.trading.positionSize,
       confidence: pos.entryConfidence,
@@ -1473,31 +1496,6 @@ class Backtester {
 
   _updateStats() {
     this.stats = this.computeStats(this.tradeHistory);
-  }
-
-  _aggregate(candles, tf) {
-    const tfMap = { "15m": 15, "1h": 60, "2h": 120, "4h": 240, "1d": 1440 };
-    const minutes = tfMap[tf] || 60;
-    const agg = [];
-    let current = null;
-    for (const c of candles) {
-      if (!current) {
-        current = { ...c };
-        continue;
-      }
-      const diff = (c.time - current.time) / (60 * 1000);
-      if (diff >= minutes) {
-        agg.push(current);
-        current = { ...c };
-      } else {
-        current.high = Math.max(current.high, c.high);
-        current.low = Math.min(current.low, c.low);
-        current.close = c.close;
-        current.volume += c.volume;
-      }
-    }
-    if (current) agg.push(current);
-    return agg;
   }
 }
 
@@ -1690,12 +1688,7 @@ class FearGreedManager {
 }
 
 // ============================================================
-//  MARKET STATE WIDGET (Macro Heatmap) v2.8
-//  Изменение: ms-panel закрывается ТОЛЬКО:
-//   • кликом по .ms-compact (toggle)
-//   • кликом по .ms-docs-close (только docs)
-//   • клавишей Escape
-//   • кликом ВНЕ #market-state-widget (но не по .tf-btn / .tf-arrow-wrap)
+//  MARKET STATE WIDGET (Macro Heatmap)
 // ============================================================
 class MarketStateWidget {
   static CONFIG = {
@@ -1721,25 +1714,17 @@ class MarketStateWidget {
     this._isOpen = false;
     this._isDocsOpen = false;
 
-    // Закрываем панель только при клике ВНЕ контейнера #market-state-widget.
-    // Клики по .tf-btn и .tf-arrow-wrap игнорируем — это «соседние» элементы.
     this._onDocClick = (e) => {
       if (!this._isOpen) return;
       if (!this._container) return;
-
-      // Клик внутри самого виджета — не закрываем
-      if (this._container.contains(e.target)) return;
-
-      // Клик по кнопке таймфрейма — не закрываем
-      if (e.target.closest?.(".tf-btn")) return;
-
-      // Клик по стрелке гайда TF — не закрываем
-      if (e.target.closest?.(".tf-arrow-wrap")) return;
-
-      // Клик по выпадающему гайду TF — не закрываем
-      if (e.target.closest?.("#tf-guide-panel")) return;
-
-      // Всё остальное — закрываем
+      const t = e.target;
+      // ФИКС: безопасная проверка Element
+      if (t instanceof Element) {
+        if (this._container.contains(t)) return;
+        if (t.closest(".tf-btn")) return;
+        if (t.closest(".tf-arrow-wrap")) return;
+        if (t.closest("#tf-guide-panel")) return;
+      }
       this._close();
     };
 
@@ -1781,6 +1766,7 @@ class MarketStateWidget {
   refreshNow() {
     return this._refresh(true);
   }
+
   _toggle() {
     this._isOpen ? this._close() : this._open();
   }
@@ -2023,9 +2009,7 @@ class MarketStateWidget {
 
   _scaleInfo(v) {
     const x = utils.clamp(Math.round(v), 0, 100);
-    for (const s of MACRO_SCALE) {
-      if (x >= s.min && x <= s.max) return s;
-    }
+    for (const s of MACRO_SCALE) if (x >= s.min && x <= s.max) return s;
     return MACRO_SCALE[MACRO_SCALE.length - 1];
   }
   _scoreClass(v) {
@@ -2033,9 +2017,6 @@ class MarketStateWidget {
   }
   _scoreColor(v) {
     return this._scaleInfo(v).color;
-  }
-  _scoreLabel(v) {
-    return this._scaleInfo(v).label;
   }
 
   _buildDocsHtml() {
@@ -2045,32 +2026,23 @@ class MarketStateWidget {
       <h4>Как читать баллы (общая шкала)</h4>
       <ul>
         <li>75–100 🟢 Очень здоровый — Рынок сильный, тренд устойчив, можно торговать</li>
-        <li>55–74 &ensp;🟡 Здоровый/нейтральный — Смешанные сигналы, торгуйте осторожно</li>
-        <li>40–54 &ensp;🟠 Осторожно — Риски растут, снижайте плечо</li>
-        <li>20–39 &ensp;🔴 Риск — Перегрев/паника, лучше в стороне</li>
-        <li>0–19 &ensp;&ensp;🔴 Экстрим — Кризис, экстремальные условия</li>
+        <li>55–74 🟡 Здоровый/нейтральный — Смешанные сигналы, торгуйте осторожно</li>
+        <li>40–54 🟠 Осторожно — Риски растут, снижайте плечо</li>
+        <li>20–39 🔴 Риск — Перегрев/паника, лучше в стороне</li>
+        <li>0–19 🔴 Экстрим — Кризис, экстремальные условия</li>
       </ul>
-      <p><strong>Важно:</strong> это не сигнал покупать/продавать. Это контекст — фильтр, который говорит «сейчас хорошее время для сделок» или «сейчас всё против вас».</p>
-      <p><h4>1. Ликвидность</h4> — это «толщина» рынка. Насколько легко купить или продать актив без сильного движения цены. Чем выше ликвидность — тем больше денег ходит по рынку, тем меньше проскальзывание в сделках, тем стабильнее цены.</p>
-      <p><h4>2. Плечо</h4> — это объем кредитных сделок на рынке. Чем выше плечо — тем больше денег можно занять, тем больше можно заработать, но и тем больше можно потерять.</p>
-      <p><h4>3. Широта</h4> — это количество активов, которые торгуются на рынке. Чем шире широта — тем больше возможностей для торговли, тем больше можно заработать, но и тем больше можно потерять.</p>
-      <h4>ПОКАЗАТЕЛИ СОСТОЯНИЯ РЫНКА</h4>
-      <p><strong>1. Funding BTC</strong> — ставка финансирования. Формат: +0.0124%</p>
-      <ul>
-        <li>🟢 зелёный: −0.05% до +0.05% (здоровый диапазон)</li>
-        <li>🔴 красный: вне этого диапазона (перегрев/паника)</li>
-      </ul>
-      <p><strong>2. Long/Short</strong> — соотношение счетов. Формат: 1.42</p>
-      <ul>
-        <li>🟢 зелёный: 0.6 – 2.2 (здоровый баланс)</li>
-        <li>🔴 красный: &lt; 0.6 или &gt; 2.2 (перекос)</li>
-      </ul>
-      <p><strong>3. BTC Dom</strong> — доминирование BTC. Формат: 52.3%</p>
-      <p><strong>4. MCap 24h</strong> — изменение капитализации за сутки. Формат: +1.2%</p>
-      <p><strong>5. Объём 24h</strong> — объём торгов за сутки. Формат: $85.3B</p>
-      <p><strong>6. Капитализация</strong> — общая капитализация. Формат: $2.4T</p>
-      <br>
-      <h4>Итоговый Macro Score = Ликвидность × 0.4 + Плечо × 0.3 + Широта × 0.3</h4>
+      <p><strong>Важно:</strong> это не сигнал покупать/продавать. Это контекст — фильтр.</p>
+      <p><h4>1. Ликвидность</h4> — «толщина» рынка.</p>
+      <p><h4>2. Плечо</h4> — объём кредитных сделок.</p>
+      <p><h4>3. Широта</h4> — количество активов, торгуемых на рынке.</p>
+      <h4>ПОКАЗАТЕЛИ</h4>
+      <p><strong>Funding BTC</strong> — ставка финансирования.</p>
+      <p><strong>Long/Short</strong> — соотношение счетов.</p>
+      <p><strong>BTC Dom</strong> — доминирование BTC.</p>
+      <p><strong>MCap 24h</strong> — изменение капитализации.</p>
+      <p><strong>Объём 24h</strong> — объём торгов за сутки.</p>
+      <p><strong>Капитализация</strong> — общая капитализация.</p>
+      <h4>Macro = Ликвидность × 0.4 + Плечо × 0.3 + Широта × 0.3</h4>
     `;
   }
 
@@ -2168,9 +2140,7 @@ class MarketStateWidget {
               <span class="ms-panel-macro-label">${macroInfo.label}</span>
             </div>
           </div>
-
           <div class="ms-heatmap">${rowsHtml}</div>
-
           <div class="ms-details">
             <div class="ms-detail"><span>Funding BTC</span><span class="ms-detail-val ${fundingCls}">${fundingPct}%</span></div>
             <div class="ms-detail"><span>Long/Short</span><span class="ms-detail-val ${lsCls}">${lsRatioStr}</span></div>
@@ -2179,26 +2149,21 @@ class MarketStateWidget {
             <div class="ms-detail"><span>Объём 24h</span><span class="ms-detail-val">$${this._fmtNum(data.totalVolume)}</span></div>
             <div class="ms-detail"><span>Капитализация</span><span class="ms-detail-val">$${this._fmtNum(data.totalMcap)}</span></div>
           </div>
-
           <div class="ms-panel-footer">
             <div class="ms-panel-update">
               <span class="ms-dot" id="ms-status-dot"></span>
               <span id="ms-update-time">${this._fmtTime(data.ts || Date.now())}</span>
             </div>
             <button class="ms-refresh-btn" id="ms-refresh-btn" type="button">↻ Обновить</button>
-            <button class="ms-docs-btn" id="ms-docs-btn" type="button">ДОКУМЕНТАЦИЯ<span class="ms-compact-arrow ms-docs-arrow">▼</span>
-            </button>
+            <button class="ms-docs-btn" id="ms-docs-btn" type="button">ДОКУМЕНТАЦИЯ<span class="ms-compact-arrow ms-docs-arrow">▼</span></button>
           </div>
         </div>
-
         <div class="ms-docs-panel">
           <div class="ms-docs-header">
             <span>ДОКУМЕНТАЦИЯ</span>
             <button class="ms-docs-close" type="button">✕</button>
           </div>
-          <div class="ms-docs-content">
-            ${this._buildDocsHtml()}
-          </div>
+          <div class="ms-docs-content">${this._buildDocsHtml()}</div>
         </div>
       </div>
     `;
@@ -2282,8 +2247,7 @@ class MarketStateWidget {
 }
 
 // ============================================================
-//  TF GUIDE PANEL (◂ выпадающая панель с doc-card активного TF)
-//  v10.2: рендер расширенного гайда + закрытие только принудительно
+//  TF GUIDE PANEL
 // ============================================================
 class TFGuidePanel {
   constructor() {
@@ -2293,11 +2257,13 @@ class TFGuidePanel {
 
     this._onDocClick = (e) => {
       if (!this._isOpen) return;
-      if (this._el.trigger && this._el.trigger.contains(e.target)) return;
-      const tfBtn = e.target.closest?.(".tf-btn");
-      if (tfBtn) return;
-      if (this._el.closeBtn && this._el.closeBtn.contains(e.target)) return;
-      if (this._el.wrap && this._el.wrap.contains(e.target)) return;
+      const t = e.target;
+      if (t instanceof Element) {
+        if (this._el.trigger && this._el.trigger.contains(t)) return;
+        if (t.closest(".tf-btn")) return;
+        if (this._el.closeBtn && this._el.closeBtn.contains(t)) return;
+        if (this._el.wrap && this._el.wrap.contains(t)) return;
+      }
       this.close();
     };
     this._onKeyDown = (e) => {
@@ -2322,12 +2288,11 @@ class TFGuidePanel {
       e.stopPropagation();
       this.toggle();
     });
-    if (this._el.closeBtn) {
+    if (this._el.closeBtn)
       this._el.closeBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         this.close();
       });
-    }
 
     document.addEventListener("click", this._onDocClick);
     document.addEventListener("keydown", this._onKeyDown);
@@ -2342,7 +2307,6 @@ class TFGuidePanel {
     this._currentTF = tf;
     this._renderCard(tf);
   }
-
   toggle() {
     this._isOpen ? this.close() : this.open();
   }
@@ -2365,49 +2329,14 @@ class TFGuidePanel {
       <div class="doc-card doc-card-extended" data-tf="${tf}">
         <div class="tf-name">${g.icon} ${g.name}</div>
         ${g.tagline ? `<div class="tf-tagline">${g.tagline}</div>` : ""}
-
-        ${
-          g.description
-            ? `
-          <div class="doc-section doc-section-desc">
-            ${g.description}
-          </div>
-        `
-            : ""
-        }
-
-        ${
-          g.entryDescription
-            ? `
-          <div class="doc-section doc-section-entry">
-            ${g.entryDescription}
-          </div>
-        `
-            : ""
-        }
-
-        ${
-          g.waitDescription
-            ? `
-          <div class="doc-section doc-section-wait">
-            ${g.waitDescription}
-          </div>
-        `
-            : ""
-        }
-
+        ${g.description ? `<div class="doc-section doc-section-desc">${g.description}</div>` : ""}
+        ${g.entryDescription ? `<div class="doc-section doc-section-entry">${g.entryDescription}</div>` : ""}
+        ${g.waitDescription ? `<div class="doc-section doc-section-wait">${g.waitDescription}</div>` : ""}
         <div class="doc-section doc-section-actions">
-          <div style="margin:4px 0; font-size:11px;">
-            <span class="action-buy"><span style="color:#00ff00;">▲</span> BUY:</span> ${g.action.BUY}
-          </div>
-          <div style="margin:4px 0; font-size:11px;">
-            <span class="action-sell"><span style="color:red;">▼</span> SELL:</span> ${g.action.SELL}
-          </div>
-          <div style="margin:4px 0; font-size:11px;">
-            <span class="action-wait">⏸️ WAIT:</span> ${g.action.WAIT}
-          </div>
+          <div style="margin:4px 0; font-size:11px;"><span class="action-buy"><span style="color:#00ff00;">▲</span> BUY:</span> ${g.action.BUY}</div>
+          <div style="margin:4px 0; font-size:11px;"><span class="action-sell"><span style="color:red;">▼</span> SELL:</span> ${g.action.SELL}</div>
+          <div style="margin:4px 0; font-size:11px;"><span class="action-wait">⏸️ WAIT:</span> ${g.action.WAIT}</div>
         </div>
-
         <div class="doc-section doc-section-params">
           <div><span class="risk-label">Риск:</span> <span class="risk-value">${g.risk}</span></div>
           <div><span class="risk-label">Плечо:</span> <span class="risk-value" style="color:#fbbf24;">${g.leverage}</span></div>
@@ -2416,16 +2345,7 @@ class TFGuidePanel {
           <div><span class="risk-label">Профит:</span> <span class="risk-value" style="color:#34d399;">${g.takeProfit}</span></div>
           ${g.holdTime ? `<div><span class="risk-label">Удержание:</span> <span class="risk-value">${g.holdTime}</span></div>` : ""}
         </div>
-
-        ${
-          g.proTip
-            ? `
-          <div class="doc-section doc-section-tip">
-            💡 <b>Совет профи:</b> ${g.proTip}
-          </div>
-        `
-            : ""
-        }
+        ${g.proTip ? `<div class="doc-section doc-section-tip">💡 <b>Совет профи:</b> ${g.proTip}</div>` : ""}
       </div>
     `;
   }
@@ -2524,7 +2444,7 @@ class UIRenderer {
           <div class="widget-header">
               <div>
                   <span class="widget-title">⚛ CRYPTO SIGNAL TOOL ⚛</span>
-                  <span class="widget-version"><b>v10.2</b> • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin) •</span>
+                  <span class="widget-version"><b>v10.3</b> • Приложение работает в реальном времени, анализируя данные 7 индикаторов с 7 криптобирж</span>
               </div>
               <div class="widget-status-group">
                   <div class="sound-controls">
@@ -2623,17 +2543,14 @@ class UIRenderer {
         <div class="doc-card doc-card-extended" data-tf="${tf}">
           <div class="tf-name">${g.icon} ${g.name}</div>
           ${g.tagline ? `<div class="tf-tagline">${g.tagline}</div>` : ""}
-
           ${g.description ? `<div class="doc-section doc-section-desc">${g.description}</div>` : ""}
           ${g.entryDescription ? `<div class="doc-section doc-section-entry">${g.entryDescription}</div>` : ""}
           ${g.waitDescription ? `<div class="doc-section doc-section-wait">${g.waitDescription}</div>` : ""}
-
           <div class="doc-section doc-section-actions">
             <div style="margin:4px 0; font-size:11px;"><span class="action-buy"><span style="color:#00ff00;">▲</span> BUY:</span> ${g.action.BUY}</div>
             <div style="margin:4px 0; font-size:11px;"><span class="action-sell">🔻 SELL:</span> ${g.action.SELL}</div>
             <div style="margin:4px 0; font-size:11px;"><span class="action-wait">⏸️ WAIT:</span> ${g.action.WAIT}</div>
           </div>
-
           <div class="doc-section doc-section-params">
             <div><span class="risk-label">Риск:</span> <span class="risk-value">${g.risk}</span></div>
             <div><span class="risk-label">Плечо:</span> <span class="risk-value" style="color:#fbbf24;">${g.leverage}</span></div>
@@ -2642,7 +2559,6 @@ class UIRenderer {
             <div><span class="risk-label">Профит:</span> <span class="risk-value" style="color:#34d399;">${g.takeProfit}</span></div>
             ${g.holdTime ? `<div><span class="risk-label">Удержание:</span> <span class="risk-value">${g.holdTime}</span></div>` : ""}
           </div>
-
           ${g.proTip ? `<div class="doc-section doc-section-tip">💡 <b>Совет профи:</b> ${g.proTip}</div>` : ""}
         </div>
       `;
@@ -2650,9 +2566,7 @@ class UIRenderer {
       .join("");
 
     return `
-      <div class="doc-grid">
-        ${cards}
-      </div>
+      <div class="doc-grid">${cards}</div>
       <div class="doc-legend">
           <span class="legend-item"><span class="legend-dot buy-dot"></span> BUY</span>
           <span class="legend-item"><span class="legend-dot sell-dot"></span> SELL</span>
@@ -2672,7 +2586,7 @@ class UIRenderer {
           • Диверсифицируйте активы (не более 30% в один актив)
       </div>
       <br>
-      <span>Данное приложение — это мощный инструмент для принятия торговых решений, но не гарантия прибыли. Это профессиональный торговый терминал для криптовалют, который объединяет 7 лучших технических индикаторов в единую систему генерации сигналов. Приложение работает в реальном времени, анализируя данные с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin)</span>
+      <span>Данное приложение — это мощный инструмент для принятия торговых решений, но не гарантия прибыли.</span>
       <br><br>
       <span>РАСШИФРОВКА 7 ИНДИКАТОРОВ (веса настраиваются в CONFIG.scoring.weights, итог автонормируется к 100%)<br>
         1. RSI — вес ${w.rsi} → ${pct("rsi")}%<br>
@@ -2685,10 +2599,7 @@ class UIRenderer {
         <em style="color:#64748b;">Сумма сырых весов: ${totalW} (нормируется автоматически).</em>
       </span>
       <br>
-      <span>
-          <strong>МЕРЦАНИЕ</strong><br>
-          60-64% Слабая • 65-69% Средняя • 70-74% Сильная • 75-79% Очень сильная • 80%+ Экстремальная
-      </span>
+      <span><strong>МЕРЦАНИЕ</strong><br>60-64% Слабая • 65-69% Средняя • 70-74% Сильная • 75-79% Очень сильная • 80%+ Экстремальная</span>
     `;
   }
 
@@ -2731,7 +2642,6 @@ class UIRenderer {
       historyGrid: document.getElementById("trade-history-grid"),
       historyStatus: document.getElementById("history-status"),
       assetCount: document.getElementById("asset-count"),
-      soundStatusFooter: document.getElementById("sound-status-footer"),
       soundToggle: document.getElementById("sound-toggle"),
       tfGroup: document.getElementById("tf-group"),
       statTotal: document.getElementById("stat-total"),
@@ -2754,8 +2664,6 @@ class UIRenderer {
           const enabled = this.soundManager.toggle();
           this.el.soundToggle.className = `sound-toggle ${enabled ? "active" : "muted"}`;
           this.el.soundToggle.innerHTML = `${enabled ? "🔊" : "🔇"}<span class="sound-label">${enabled ? "Вкл" : "Выкл"}</span>`;
-          if (this.el.soundStatusFooter)
-            this.el.soundStatusFooter.textContent = `Звук: ${enabled ? "Вкл" : "Выкл"}`;
         }
       });
     }
@@ -2816,7 +2724,12 @@ class UIRenderer {
               : "#475569";
     }
 
-    this._updateIndicators(card, signal.indicatorScores);
+    // ФИКС: передаём indicatorStates для нейтральных значений
+    this._updateIndicators(
+      card,
+      signal.indicatorScores,
+      signal.indicatorStates,
+    );
     this._updateActions(card, signal.actionProbabilities);
     this._updateBadgeAndGlow(card, displayDir, signal.confidence);
 
@@ -2844,34 +2757,108 @@ class UIRenderer {
     }
   }
 
-  _updateIndicators(card, scores) {
+  // ============================================================
+  //  ФИКС: нормализация по весу индикатора + нейтральные значения
+  // ============================================================
+  _updateIndicators(card, scores, states) {
     if (!scores) return;
+    const weights = CONFIG.scoring.weights;
+    const totalWeight = Object.values(weights).reduce((s, v) => s + v, 0) || 1;
     const items = card.querySelectorAll(".indicator-item");
     const keys = ["rsi", "macd", "ema", "cvd", "bb", "volume", "poc"];
+
     items.forEach((item, idx) => {
       const key = keys[idx];
       const score = scores[key] || 0;
+      const state = states?.[key];
       const valueEl = item.querySelector(".ind-value");
       const barFill = item.querySelector(".indicator-bar-fill");
+      const labelEl = item.querySelector(".ind-label");
       if (!valueEl || !barFill) return;
 
-      let direction = "neutral",
-        display = "0%";
+      // Максимальный вклад данного индикатора в netScore = weight/totalWeight*100
+      const maxScore = (weights[key] / totalWeight) * 100;
+      const normalizedPct =
+        maxScore > 0 ? Math.min((Math.abs(score) / maxScore) * 100, 100) : 0;
+
+      let cls = "neutral";
+      let display = "0";
+
       if (score > 0) {
-        const pct = Math.min((score / 20) * 100, 100);
-        display = `+${Math.round(pct)}%`;
-        direction = score >= 15 ? "strong-bullish" : "bullish";
+        display = `+${Math.round(normalizedPct)}%`;
+        cls = normalizedPct >= 75 ? "strong-bullish" : "bullish";
       } else if (score < 0) {
-        const pct = Math.min((Math.abs(score) / 20) * 100, 100);
-        display = `-${Math.round(pct)}%`;
-        direction = Math.abs(score) >= 15 ? "strong-bearish" : "bearish";
+        display = `-${Math.round(normalizedPct)}%`;
+        cls = normalizedPct >= 75 ? "strong-bearish" : "bearish";
+      } else if (state) {
+        // Нейтральное состояние — показываем реальное значение индикатора
+        display = this._formatNeutralState(key, state);
+        cls = "neutral";
+      } else {
+        display = "0";
       }
+
       valueEl.textContent = display;
-      valueEl.className = `ind-value ${direction}`;
-      const barPercent = Math.min((Math.abs(score) / 20) * 100, 100);
-      barFill.style.width = `${barPercent}%`;
-      barFill.className = `indicator-bar-fill ${direction.includes("bullish") ? "bullish" : direction.includes("bearish") ? "bearish" : "neutral"}`;
+      valueEl.className = `ind-value ${cls}`;
+
+      // ФИКС: используем classList, не затираем сильные классы
+      barFill.classList.remove(
+        "neutral",
+        "bullish",
+        "bearish",
+        "strong-bullish",
+        "strong-bearish",
+      );
+      barFill.classList.add(cls);
+      barFill.style.width = `${normalizedPct}%`;
+
+      // Tooltip с реальным значением
+      if (labelEl && state) {
+        labelEl.title = this._formatTooltip(key, state);
+      }
     });
+  }
+
+  _formatNeutralState(key, s) {
+    switch (key) {
+      case "rsi":
+        return `${s.value}`;
+      case "macd":
+        return s.bias === "growing" ? "↗" : s.bias === "falling" ? "↘" : "→";
+      case "ema":
+        return s.bias === "mixed" ? "≈" : "→";
+      case "cvd":
+        return s.bias === "rising" ? "↗" : s.bias === "falling" ? "↘" : "→";
+      case "bb":
+        return s.squeeze ? "≋" : s.width;
+      case "volume":
+        return `${s.ratio}x`;
+      case "poc":
+        return s.near ? "◎" : s.distance;
+      default:
+        return "0";
+    }
+  }
+
+  _formatTooltip(key, s) {
+    switch (key) {
+      case "rsi":
+        return `RSI: ${s.value} (${s.bias})`;
+      case "macd":
+        return `MACD hist: ${s.value} (${s.bias})`;
+      case "ema":
+        return `EMA Ribbon: ${s.bias}`;
+      case "cvd":
+        return `CVD: ${s.value} (${s.bias})`;
+      case "bb":
+        return `BB width: ${s.width}, pos: ${s.position}${s.squeeze ? ", SQUEEZE" : ""}`;
+      case "volume":
+        return `Volume ratio: ${s.ratio}x${s.spike ? " 🔥 SPIKE" : ""}`;
+      case "poc":
+        return `POC: ${s.value}, dist: ${s.distance}`;
+      default:
+        return "";
+    }
   }
 
   _updateActions(card, probs) {
@@ -2889,17 +2876,22 @@ class UIRenderer {
     });
   }
 
+  // ФИКС: classList вместо манипуляций строкой className
   _updateBadgeAndGlow(card, direction, confidence) {
     const badge = card.querySelector(".signal-strength-badge");
-    card.className = card.className
-      .split(" ")
-      .filter(
-        (cls) =>
-          !cls.startsWith("buy-") &&
-          !cls.startsWith("sell-") &&
-          cls !== "neutral",
-      )
-      .join(" ");
+    card.classList.remove(
+      "buy-60",
+      "buy-65",
+      "buy-70",
+      "buy-75",
+      "buy-80",
+      "sell-60",
+      "sell-65",
+      "sell-70",
+      "sell-75",
+      "sell-80",
+      "neutral",
+    );
     if (badge) {
       badge.className = "signal-strength-badge";
       badge.textContent = "";
@@ -3078,9 +3070,7 @@ class App {
   async init() {
     this.ui.render();
     this._bindUIEvents();
-
     this.fng.start();
-
     this.marketState = new MarketStateWidget();
     this.marketState.start();
 
@@ -3093,7 +3083,6 @@ class App {
     this._generateSignals();
 
     this._updateInterval = setInterval(() => this._generateSignals(), 120000);
-
     setInterval(() => {
       this.ui.setLastUpdate(new Date().toLocaleTimeString());
     }, 30000);
@@ -3160,6 +3149,7 @@ class App {
     return map[tf] || map["1h"];
   }
 
+  // ФИКС: накапливаем volume при обновлении текущей TF-свечи
   _handleKline(data) {
     const k = data.k;
     const symbol = data.s;
@@ -3179,6 +3169,7 @@ class App {
       last.high = Math.max(last.high, +k.h);
       last.low = Math.min(last.low, +k.l);
       last.close = +k.c;
+      last.volume += +k.v; // ФИКС: накапливаем объём
     } else if (!last || bucket > lastBucket) {
       candles.push({
         open: +k.o,
@@ -3199,6 +3190,7 @@ class App {
     }
   }
 
+  // ФИКС: не переподключаем WS при смене TF — стримы 1m не зависят от TF
   async onTFChange(tf) {
     this.currentTF = tf;
     this._historyLoaded = false;
@@ -3215,7 +3207,7 @@ class App {
         if (!this._loadingAssets.has(asset)) this._loadAssetData(asset);
         continue;
       }
-      const agg = this._aggregateCandles(candles, tf);
+      const agg = utils.aggregateCandles(candles, tf);
       if (!agg || agg.length < CONFIG.minCandlesRequired) continue;
       const signal = this.signalGen.generate(asset, tf, agg);
       if (signal) {
@@ -3230,31 +3222,6 @@ class App {
     }
     this.ui.setSignalCount(activeCount);
     this.ui.setLastUpdate(new Date().toLocaleTimeString());
-  }
-
-  _aggregateCandles(candles, tf) {
-    const tfMap = { "15m": 15, "1h": 60, "2h": 120, "4h": 240, "1d": 1440 };
-    const minutes = tfMap[tf] || 60;
-    const agg = [];
-    let current = null;
-    for (const c of candles) {
-      if (!current) {
-        current = { ...c };
-        continue;
-      }
-      const diff = (c.time - current.time) / (60 * 1000);
-      if (diff >= minutes) {
-        agg.push(current);
-        current = { ...c };
-      } else {
-        current.high = Math.max(current.high, c.high);
-        current.low = Math.min(current.low, c.low);
-        current.close = c.close;
-        current.volume += c.volume;
-      }
-    }
-    if (current) agg.push(current);
-    return agg;
   }
 
   async _loadAssetData(asset) {
