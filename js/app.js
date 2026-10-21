@@ -2381,8 +2381,9 @@ class UIRenderer {
         <span>Данное приложение — это мощный инструмент для принятия торговых решений, но не гарантия прибыли. Это профессиональный торговый терминал для криптовалют, который объединяет 8 лучших технических индикаторов в единую систему генерации сигналов.</span><br>
         <p>Приложение работает в реальном времени, анализируя данные 8 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin)</p>
       </div><br>
-        <span>Для более точного анализа используются следующие таймфреймы:</span>
-        <div class="doc-legend">
+      <span><b>Для более точного анализа используются следующие таймфреймы:</b></span>
+      <br>
+      <div class="doc-legend">
         <span class="legend-item"><span class="legend-dot buy-dot"></span> BUY</span>
         <span class="legend-item"><span class="legend-dot sell-dot"></span> SELL</span>
         <span class="legend-item"><span class="legend-dot wait-dot"></span> WAIT</span>
@@ -2391,12 +2392,14 @@ class UIRenderer {
       </div>
       <div style="margin-top:8px;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;font-size:11px;color:#94a3b8;">
         <strong style="color:#e2e8f0;">📌 Общие правила:</strong><br>
-        • 15m — скальпинг (опытные)<br>
-        • 1H и 2H — для уточнения<br>
+        • 15m — только для скальпинга (опытные трейдеры)<br>
+        • 1H и 2H — для уточнения точек входа<br>
         • 4H — основной TF для входа<br>
         • 1D — долгосрочные инвестиции<br>
-        • Всегда стоп-лосс!<br>
-        • Риск ≤ 2-3% депозита на сделку
+        • Всегда используйте стоп-лосс!<br>
+        • Риск ≤ 2-3% депозита на сделку <br>
+        • Диверсифицируйте активы (не более 30% в один актив) <br>
+        • Не используйте маржинальное кредитование <br>
       </div>
       <br>
       <span><b>РАСШИФРОВКА 8 ИНДИКАТОРОВ</b> (веса настраиваются в CONFIG.scoring.weights, итог автонормируется к 100%)<br>
