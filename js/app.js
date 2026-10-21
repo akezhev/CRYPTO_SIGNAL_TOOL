@@ -2399,7 +2399,7 @@ class UIRenderer {
         • Риск ≤ 2-3% депозита на сделку
       </div>
       <br>
-      <span><b>РАСШИФРОВКА 8 ИНДИКАТОРОВ</b> (веса нормируются к 100%)<br>
+      <span><b>РАСШИФРОВКА 8 ИНДИКАТОРОВ</b> (веса настраиваются в CONFIG.scoring.weights, итог автонормируется к 100%)<br>
         RSI — вес ${w.rsi} → ${pct("rsi")}%<br>
         MACD — вес ${w.macd} → ${pct("macd")}%<br>
         EMA Ribbon — вес ${w.ema} → ${pct("ema")}%<br>
@@ -2410,9 +2410,14 @@ class UIRenderer {
         NW Env — вес ${w.nw} → ${pct("nw")}% <em style="color:#64748b;">(endpoint, non-repainting)</em>
       </span>
       <br>
+      <br>
+      <span>
+          <strong>МЕРЦАНИЕ</strong><br>
+          60-64% Слабая • 65-69% Средняя • 70-74% Сильная • 75-79% Очень сильная • 80%+ Экстремальная
+      </span>
+      <br>
       <span><b>NW Envelope:</b> контр-трендовый сигнал на пересечении полос (kernel regression, h=8, mult=3, window=500).</span>
-      <br><br>
-      <span><b>ГРАДАЦИИ:</b> 60-64% Слабая • 65-69% Средняя • 70-74% Сильная • 75-79% Очень сильная • 80%+ Экстремальная</span>`;
+      <br><br>;
   }
   _indLabel(ind) {
     const m = {
