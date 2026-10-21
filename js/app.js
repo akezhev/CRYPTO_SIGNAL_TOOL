@@ -2377,7 +2377,12 @@ class UIRenderer {
       .join("");
 
     return `
-      <div class="doc-legend">
+      <div class="documentation-content">
+        <span>Данное приложение — это мощный инструмент для принятия торговых решений, но не гарантия прибыли. Это профессиональный торговый терминал для криптовалют, который объединяет 8 лучших технических индикаторов в единую систему генерации сигналов.</span><br>
+        <p>Приложение работает в реальном времени, анализируя данные 8 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin)</p>
+      </div><br>
+        <span>Для более точного анализа используются следующие таймфреймы:</span>
+        <div class="doc-legend">
         <span class="legend-item"><span class="legend-dot buy-dot"></span> BUY</span>
         <span class="legend-item"><span class="legend-dot sell-dot"></span> SELL</span>
         <span class="legend-item"><span class="legend-dot wait-dot"></span> WAIT</span>
