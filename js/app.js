@@ -2377,7 +2377,7 @@ class UIRenderer {
       .join("");
 
     return `
-      <div>
+      {
         <div class="documentation-content">
           <span>Данное приложение — это мощный инструмент для принятия торговых решений, но не гарантия прибыли. Это профессиональный торговый терминал для криптовалют, который объединяет 8 лучших технических индикаторов в единую систему генерации сигналов.</span><br>
           <p>Приложение работает в реальном времени, анализируя данные 8 индикаторов с 7 криптобирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin)</p>
@@ -2421,8 +2421,7 @@ class UIRenderer {
         </span>
         <br>
         <span><b>NW Envelope:</b> контр-трендовый сигнал на пересечении полос (kernel regression, h=8, mult=3, window=500).</span>
-        <br><br
-      </div>;
+        <br><br;
   }
   _indLabel(ind) {
     const m = {
