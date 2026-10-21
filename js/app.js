@@ -2387,9 +2387,9 @@ class UIRenderer {
       </div>
       <div style="margin-top:8px;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;font-size:11px;color:#94a3b8;">
         <strong style="color:#e2e8f0;">📌 Общие правила:</strong><br>
-        • 4H — основной TF для входа<br>
-        • 1H и 2H — для уточнения<br>
         • 15m — скальпинг (опытные)<br>
+        • 1H и 2H — для уточнения<br>
+        • 4H — основной TF для входа<br>
         • 1D — долгосрочные инвестиции<br>
         • Всегда стоп-лосс!<br>
         • Риск ≤ 2-3% депозита на сделку
