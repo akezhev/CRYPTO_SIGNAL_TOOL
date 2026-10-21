@@ -2377,7 +2377,6 @@ class UIRenderer {
       .join("");
 
     return `
-      <div class="doc-grid">${cards}</div>
       <div class="doc-legend">
         <span class="legend-item"><span class="legend-dot buy-dot"></span> BUY</span>
         <span class="legend-item"><span class="legend-dot sell-dot"></span> SELL</span>
