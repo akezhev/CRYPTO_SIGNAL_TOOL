@@ -2408,7 +2408,7 @@ class UIRenderer {
         NW Env — вес ${w.nw} → ${pct("nw")}% <em style="color:#64748b;">(endpoint, non-repainting)</em>
       </span>
       <br>
-      <span><b>NW Envelope:</b> контр-трендовый сигнал на пересечении полос (kernel regression, h=8, mult=3, window=500).</span>
+      <span><b>Nadaraya-Watson Envelope:</b> контр-трендовый сигнал на пересечении полос (kernel regression, h=8, mult=3, window=500).</span>
       <br><br>
       <span><b>МЕРЦАНИЕ:</b> 60-64% Слабая • 65-69% Средняя • 70-74% Сильная • 75-79% Очень сильная • 80%+ Экстремальная</span>`;
   }
