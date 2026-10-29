@@ -59,7 +59,7 @@ const CONFIG = {
       rsi: 20,
       macd: 20,
       ema: 20,
-      cvd: 10,
+      cvd: 20,
       bb: 10,
       volume: 20,
       poc: 20,
