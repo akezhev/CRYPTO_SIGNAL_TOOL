@@ -2273,7 +2273,7 @@ class UIRenderer {
         <div class="widget-header">
           <div>
             <span class="widget-title">⚛ CRYPTO SIGNAL TOOL ⚛</span>
-            <span class="widget-version"><b>v10.4</b> • 8 индикаторов • 7 бирж</span>
+            <span class="widget-version"><b>v10.4</b> • 8 индикаторов • 7 бирж (Binance, Bybit, OKX, MEXC, Coinbase, HTX, KuCoin)</span>
           </div>
           <div class="widget-status-group">
             <div class="sound-controls">
